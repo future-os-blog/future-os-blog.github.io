@@ -4,6 +4,10 @@
    (data-theme on <html>). */
 
 :root {
+  /* Tells the browser to render its own UI (scrollbars, form controls,
+     caret, autofill) in the dark palette, so the chrome matches the page
+     instead of staying light on a dark background. */
+  color-scheme: dark;
   --bg: #0a0d13;
   --bg-raise: #10151f;
   --bg-code: #0d1117;
@@ -27,6 +31,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --bg: #fbfbfd;
   --bg-raise: #ffffff;
   --bg-code: #f6f8fb;
@@ -45,6 +50,7 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
     --bg: #fbfbfd;
     --bg-raise: #ffffff;
     --bg-code: #f6f8fb;
@@ -216,6 +222,28 @@ a:focus-visible {
 .theme-toggle:hover {
   color: var(--accent);
   border-color: var(--accent);
+}
+
+/* The glyph names what a click will switch *to*, so the button visibly changes
+   with the theme — a fixed glyph made a working toggle look inert. */
+.theme-toggle-icon {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.theme-toggle-icon::before {
+  content: "☀";
+}
+
+:root[data-theme="light"] .theme-toggle-icon::before {
+  content: "☾";
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .theme-toggle-icon::before {
+    content: "☾";
+  }
 }
 
 /* ── Index ──────────────────────────────────────────────────────────── */

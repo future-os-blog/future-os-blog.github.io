@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import email.utils
+import hashlib
 import html
 import json
 import re
@@ -668,6 +669,28 @@ UI_STRINGS = {
 }
 
 
+# Set by build() to the blog's own assets dir, so a page rendered for one blog
+# never hashes another blog's files (the tests build throwaway trees).
+_ASSET_DIR: Path | None = None
+
+
+def asset_version(name: str) -> str:
+    """Short content hash for a site asset, used as a cache-busting query.
+
+    Without it the stylesheet and script keep the same URL forever, so a
+    browser that cached an earlier stylesheet keeps serving it against newer
+    HTML — the kind of staleness that looks like a broken toggle or missing
+    style. Hashing the bytes means the URL changes exactly when the file does.
+    """
+    if _ASSET_DIR is None:
+        return "0"
+    try:
+        digest = hashlib.sha256((_ASSET_DIR / name).read_bytes()).hexdigest()
+    except OSError:
+        return "0"
+    return digest[:10]
+
+
 def page(
     *,
     config: dict[str, object],
@@ -722,8 +745,8 @@ def page(
 {alt}
 {xdefault}
 <link rel="alternate" type="application/rss+xml" title="{site_title}" href="{feed_href}" />
-<link rel="stylesheet" href="{root}assets/blog.css" />
-<script src="{root}assets/blog.js" defer></script>
+<link rel="stylesheet" href="{root}assets/blog.css?v={asset_version('blog.css')}" />
+<script src="{root}assets/blog.js?v={asset_version('blog.js')}" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">{skip}</a>
@@ -740,7 +763,7 @@ def page(
       <a class="nav-external" href="{site_repo}">GitHub</a>
       {lang_switch}
     </nav>
-    <button class="theme-toggle" type="button" data-theme-toggle aria-label="{ui['theme_label']}">◐</button>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="{ui['theme_label']}"><span class="theme-toggle-icon" aria-hidden="true"></span></button>
   </div>
 </header>
 <main id="main" class="wrap">
@@ -1099,6 +1122,8 @@ def load_config(blog_dir: Path, base_url: str | None = None) -> dict[str, object
 
 
 def build(blog_dir: Path, out_dir: Path, base_url: str | None = None, include_drafts: bool = False) -> int:
+    global _ASSET_DIR
+    _ASSET_DIR = blog_dir / "assets"
     config = load_config(blog_dir, base_url)
     en_posts = load_posts(blog_dir, include_drafts, lang="en")
     en_slugs = {post.slug for post in en_posts}

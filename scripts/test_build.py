@@ -55,6 +55,7 @@ def make_blog(posts, config=None, assets=True, zh_posts=None):
     if assets:
         (root / "assets").mkdir()
         (root / "assets" / "blog.css").write_text("body{}", encoding="utf-8")
+        (root / "assets" / "blog.js").write_text("//toggle", encoding="utf-8")
     for name, content in posts.items():
         (root / "posts" / name).write_text(content, encoding="utf-8")
     if zh_posts:
@@ -339,6 +340,30 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn("Draft post", index)
         self.assertLess(index.index("Newer post"), index.index("Older post"))
 
+    def test_asset_urls_carry_a_content_hash(self):
+        """A cached stylesheet must never be served against newer HTML: the
+        asset URLs change exactly when the files do."""
+        index = (self.out / "index.html").read_text(encoding="utf-8")
+        self.assertRegex(index, r'href="assets/blog\.css\?v=[0-9a-f]{10}"')
+        self.assertRegex(index, r'src="assets/blog\.js\?v=[0-9a-f]{10}"')
+
+    def test_asset_hash_changes_with_content(self):
+        before = (self.out / "index.html").read_text(encoding="utf-8")
+        (self.root / "assets" / "blog.css").write_text("body{color:red}", encoding="utf-8")
+        after = run_build(self.root)
+        again = (after / "index.html").read_text(encoding="utf-8")
+        self.assertNotEqual(
+            re.search(r'blog\.css\?v=([0-9a-f]+)', before).group(1),
+            re.search(r'blog\.css\?v=([0-9a-f]+)', again).group(1),
+        )
+
+    def test_theme_toggle_icon_is_theme_aware_markup(self):
+        """The glyph names the target theme via CSS, so the button visibly
+        changes; a fixed character made a working toggle look inert."""
+        index = (self.out / "index.html").read_text(encoding="utf-8")
+        self.assertIn('class="theme-toggle-icon"', index)
+        self.assertIn('data-theme-toggle', index)
+
     def test_pages_feed_sitemap_and_nojekyll_are_written(self):
         for name in ("index.html", "feed.xml", "sitemap.xml", ".nojekyll"):
             self.assertTrue((self.out / name).is_file(), name)
@@ -621,6 +646,28 @@ class GiscusTests(unittest.TestCase):
                     config=self.config(repo_id=""),
                 )
             )
+
+
+class StylesheetTests(unittest.TestCase):
+    """The shipped stylesheet, not a throwaway one — these are properties of
+    the real file that no generated HTML can assert."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.css = (
+            Path(__file__).resolve().parent.parent / "blog" / "assets" / "blog.css"
+        ).read_text(encoding="utf-8")
+
+    def test_color_scheme_follows_the_theme(self):
+        """Without this the browser keeps light scrollbars and form controls on
+        a dark page — chrome that ignores the toggle and reads as 'it didn't
+        switch'."""
+        self.assertIn("color-scheme: dark", self.css)
+        self.assertIn("color-scheme: light", self.css)
+
+    def test_toggle_icon_changes_with_the_theme(self):
+        self.assertIn(".theme-toggle-icon::before", self.css)
+        self.assertIn('[data-theme="light"] .theme-toggle-icon::before', self.css)
 
 
 if __name__ == "__main__":
