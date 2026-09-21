@@ -293,6 +293,29 @@ class BuildTests(unittest.TestCase):
         with self.assertRaises(blog.PostError):
             blog.load_config(root)
 
+    def test_site_repo_steers_only_the_nav_github_link(self):
+        """Top GitHub link → site_repo; footer Source and Edit link → repo_url."""
+        root = make_blog(
+            {"2026-01-01-a.md": post("A")},
+            config={**CONFIG, "site_repo": "https://github.com/org/product"},
+        )
+        out = run_build(root)
+        html = (out / "posts" / "a.html").read_text(encoding="utf-8")
+        # nav uses site_repo
+        self.assertIn('<a class="nav-external" href="https://github.com/org/product">GitHub</a>', html)
+        # edit link still targets the blog repo, not site_repo
+        self.assertIn("https://github.com/example/repo/edit/main/2026-01-01-a.md", html)
+        self.assertNotIn("org/product/edit/main", html)
+        # footer source link still targets the blog repo
+        self.assertIn("https://github.com/example/repo/tree/main/blog", html)
+
+    def test_site_repo_defaults_to_repo_url(self):
+        out = run_build(make_blog({"2026-01-01-a.md": post("A")}))
+        html = (out / "index.html").read_text(encoding="utf-8")
+        self.assertIn(
+            '<a class="nav-external" href="https://github.com/example/repo">GitHub</a>', html
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

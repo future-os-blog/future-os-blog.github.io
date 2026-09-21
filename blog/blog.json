@@ -5,6 +5,7 @@
   "base_url": "https://future-os-blog.github.io",
   "author": "FutureOS",
   "repo_url": "https://github.com/future-os-blog/future-os-blog.github.io",
+  "site_repo": "https://github.com/futuregene/future-os",
   "repo_branch": "main",
   "feed_size": 20
 }

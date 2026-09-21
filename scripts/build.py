@@ -40,6 +40,7 @@ DEFAULT_CONFIG = {
     "base_url": "https://futuregene.github.io/future-os",
     "author": "FutureOS",
     "repo_url": "https://github.com/futuregene/future-os",
+    "site_repo": "",
     "repo_branch": "main",
     "feed_size": 20,
 }
@@ -535,6 +536,11 @@ def page(
 ) -> str:
     root = "../" * depth
     site_title = html.escape(str(config["title"]))
+    # The top "GitHub" link points at the *product* repo (site_repo) when set,
+    # otherwise at the blog repo. The footer "Source: blog/" and each post's
+    # "Edit this post" always use repo_url — they must target the repo that
+    # actually holds the sources.
+    site_repo = html.escape(str(config.get("site_repo") or config["repo_url"]))
     full_title = site_title if title == site_title else f"{html.escape(title)} · {site_title}"
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -563,7 +569,7 @@ def page(
       <a href="{root}index.html">Posts</a>
       <a href="{root}tags/index.html">Tags</a>
       <a href="{root}feed.xml">RSS</a>
-      <a class="nav-external" href="{html.escape(str(config['repo_url']))}">GitHub</a>
+      <a class="nav-external" href="{site_repo}">GitHub</a>
       <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme">◐</button>
     </nav>
   </div>
