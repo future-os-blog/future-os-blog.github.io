@@ -436,14 +436,18 @@ class ChineseMirrorTests(unittest.TestCase):
                 zh_posts={"2026-01-01-alpha.md": cover},
             )
         )
-        # English index at depth 0, Chinese at /zh/ (depth 1).
         en_index = (out / "index.html").read_text(encoding="utf-8")
         zh_index = (out / "zh" / "index.html").read_text(encoding="utf-8")
+        # Covers resolve from the *site* root...
         self.assertIn('src="assets/covers/a.png"', en_index)
         self.assertIn('src="../assets/covers/a.png"', zh_index)
-        # Cards and the tag cloud must link back up out of /zh/.
-        self.assertIn('href="../posts/alpha.html"', zh_index)
-        self.assertIn('href="../tags/x.html"', zh_index)
+        # ...but post and tag links resolve from the *language* root, so on the
+        # Chinese index they stay bare (../posts/... would escape /zh/ and hit
+        # the English article — the bug this locks against).
+        self.assertIn('href="posts/alpha.html"', zh_index)
+        self.assertNotIn('href="../posts/alpha.html"', zh_index)
+        self.assertIn('href="tags/x.html"', zh_index)
+        self.assertIn('href="index.html">文章</a>', zh_index)
 
     def test_zh_post_body_figures_get_an_extra_dotdot(self):
         alpha = post("阿尔法", body="![图](../assets/x/fig.png)\n\n[另一篇](./beta.html)")
@@ -467,6 +471,22 @@ class ChineseMirrorTests(unittest.TestCase):
         # Sibling-post links stay ./<slug>.html in both languages.
         self.assertIn('href="./beta.html"', en_post)
         self.assertIn('href="./beta.html"', zh_post)
+
+    def test_zh_post_chrome_stays_inside_zh(self):
+        """Tag links and "all posts" must not escape /zh/ to the English tree."""
+        alpha = post("阿尔法", body="正文。")
+        out = run_build(
+            make_blog(
+                {"2026-01-01-alpha.md": alpha},
+                zh_posts={"2026-01-01-alpha.md": alpha},
+            )
+        )
+        zh_post = (out / "zh" / "posts" / "alpha.html").read_text(encoding="utf-8")
+        # lang_root for a /zh/posts/ page is "../" -> /zh/tags/, /zh/index.html.
+        self.assertIn('class="tag" href="../tags/x.html"', zh_post)
+        self.assertIn('href="../index.html">← 全部文章</a>', zh_post)
+        self.assertNotIn('href="../../tags/', zh_post)
+        self.assertNotIn('href="../../index.html"', zh_post)
 
 
 if __name__ == "__main__":

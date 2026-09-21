@@ -532,39 +532,199 @@ a:focus-visible {
   color: var(--fg-muted);
 }
 
+/* ── Small tablets / large phones ───────────────────────────────────────── */
 @media (max-width: 640px) {
   body {
     font-size: 16px;
+    line-height: 1.72;
   }
 
   .wrap {
     padding: 0 1.05rem;
   }
 
-  .hero {
-    padding-top: 2.25rem;
+  /* The header carries brand + four nav links + a language switch + a theme
+     toggle; on a phone that is wide enough to collide, so let it wrap onto a
+     second line instead of squashing or overflowing. */
+  .header-inner {
+    flex-wrap: wrap;
+    gap: 0.15rem 0.75rem;
+    min-height: 0;
+    padding: 0.5rem 0;
   }
 
-  .hero h1 {
-    font-size: 1.7rem;
-  }
-
-  .post-header {
-    padding-top: 2.25rem;
-  }
-
-  .post-header h1 {
-    font-size: 1.6rem;
+  .brand {
+    flex: 1 1 auto;
+    min-height: 2.5rem;
   }
 
   .site-nav {
-    gap: 0.8rem;
-    font-size: 0.84rem;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.35rem;
+    font-size: 0.88rem;
+    padding-bottom: 0.15rem;
+  }
+
+  /* Touch targets: give every nav control a comfortable height instead of a
+     bare text run the thumb has to hit exactly. */
+  .site-nav a,
+  .site-nav .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0 0.5rem;
+    border-radius: 8px;
+  }
+
+  .site-nav .nav-external::after {
+    font-size: 0.78em;
+  }
+
+  .hero {
+    padding-top: 2rem;
+  }
+
+  .hero h1 {
+    font-size: 1.72rem;
+    line-height: 1.22;
+  }
+
+  .hero .tagline {
+    font-size: 0.98rem;
+  }
+
+  .post-header {
+    padding-top: 2rem;
+  }
+
+  .post-header h1 {
+    font-size: 1.55rem;
+    line-height: 1.26;
+  }
+
+  /* Long post titles, tag rows and the source line must wrap, not overflow. */
+  .post-header .post-meta,
+  .post-tags,
+  .post-footer {
+    flex-wrap: wrap;
   }
 
   .post-footer {
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  /* Cards sit closer to the edge on a phone; a full-height 21:9 cover eats the
+     whole first screen, so crop it shorter. */
+  .post-card-cover img {
+    aspect-ratio: 16 / 9;
+  }
+
+  .post-card h2 {
+    font-size: 1.2rem;
+  }
+
+  .prose {
+    padding: 1.5rem 0;
+  }
+
+  .prose h2 {
+    font-size: 1.3rem;
+    margin-top: 2rem;
+  }
+
+  .prose h3 {
+    font-size: 1.1rem;
+  }
+
+  .prose blockquote {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0.9rem;
+  }
+
+  .prose pre {
+    padding: 0.85rem 0.95rem;
+    font-size: 0.82rem;
+    border-radius: 10px;
+  }
+
+  .prose table {
+    font-size: 0.88rem;
+  }
+}
+
+/* ── Small phones ───────────────────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .wrap {
+    padding: 0 0.85rem;
+  }
+
+  .brand-text {
+    font-size: 0.95rem;
+  }
+
+  .site-nav {
+    font-size: 0.84rem;
+  }
+
+  .hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .post-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .prose h2 {
+    font-size: 1.2rem;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+  }
+}
+
+/* ── Chinese text ────────────────────────────────────────────────────────
+   CJK glyphs are denser than Latin at the same font size, so they read better
+   with a little more leading and slightly less aggressive display weights. */
+:lang(zh-CN) body {
+  line-height: 1.8;
+}
+
+:lang(zh-CN) .hero h1,
+:lang(zh-CN) .post-header h1 {
+  letter-spacing: 0;
+  font-weight: 640;
+}
+
+:lang(zh-CN) .prose h2,
+:lang(zh-CN) .prose h3,
+:lang(zh-CN) .prose h4 {
+  letter-spacing: 0;
+}
+
+/* ── Touch devices ───────────────────────────────────────────────────────
+   Respect the notch/home indicator and avoid sticky-header surprises when the
+   on-screen keyboard changes the visual viewport. */
+@supports (padding: max(0px)) {
+  .wrap {
+    padding-left: max(1.05rem, env(safe-area-inset-left));
+    padding-right: max(1.05rem, env(safe-area-inset-right));
+  }
+
+  .site-footer {
+    padding-bottom: max(2.75rem, calc(1.5rem + env(safe-area-inset-bottom)));
+  }
+}
+
+@media (hover: none) {
+  /* No hover on touch: don't leave links looking stuck in the hover colour. */
+  a:hover {
+    text-decoration: none;
   }
 }
 

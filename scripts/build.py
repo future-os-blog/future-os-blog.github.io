@@ -568,6 +568,9 @@ UI_STRINGS = {
         "source_label": "Source:",
         "tags_heading": "Tags",
         "all_posts": "← All posts",
+        "all_tags": "← All tags",
+        "post_count": "{n} post(s)",
+        "tag_title": "Tag: {tag}",
         "edit": "Edit this post",
         "no_posts": "No posts yet.",
         "no_tags": "No tags yet.",
@@ -580,6 +583,9 @@ UI_STRINGS = {
         "source_label": "源码：",
         "tags_heading": "标签",
         "all_posts": "← 全部文章",
+        "all_tags": "← 全部标签",
+        "post_count": "{n} 篇",
+        "tag_title": "标签：{tag}",
         "edit": "编辑本文",
         "no_posts": "还没有文章。",
         "no_tags": "还没有标签。",
@@ -601,7 +607,7 @@ def page(
     alt_link: str | None = None,
     alt_href: str = "",
 ) -> str:
-    root = "../" * depth
+    root, lang_root = roots(depth, lang)
     site_title = html.escape(str(config["title"]))
     site_repo = html.escape(str(config.get("site_repo") or config["repo_url"]))
     full_title = site_title if title == site_title else f"{html.escape(title)} · {site_title}"
@@ -613,12 +619,13 @@ def page(
         if (alt_link and lang == "zh")
         else ""
     )
-    feed_href = f"{root}feed.xml" if lang == "en" else f"{root}zh/feed.xml"
+    # The feed lives at the language root (site root for English, /zh/ for Chinese).
+    feed_href = f"{lang_root}feed.xml"
     skip = ui["skip"]
     nav_posts = ui["nav_posts"]
     nav_tags = ui["nav_tags"]
     lang_switch = (
-        f'<a class="lang-switch" href="{root}{alt_href}" hreflang="{ALT_LANG[lang]}">{LANG_LABEL[lang]}</a>'
+        f'<a class="lang-switch" href="{lang_root}{alt_href}" hreflang="{ALT_LANG[lang]}">{LANG_LABEL[lang]}</a>'
         if alt_href
         else ""
     )
@@ -644,13 +651,13 @@ def page(
 <a class="skip-link" href="#main">{skip}</a>
 <header class="site-header">
   <div class="wrap header-inner">
-    <a class="brand" href="{root}index.html">
+    <a class="brand" href="{lang_root}index.html">
       <span class="brand-mark">◆</span>
       <span class="brand-text">{site_title}</span>
     </a>
     <nav class="site-nav">
-      <a href="{root}index.html">{nav_posts}</a>
-      <a href="{root}tags/index.html">{nav_tags}</a>
+      <a href="{lang_root}index.html">{nav_posts}</a>
+      <a href="{lang_root}tags/index.html">{nav_tags}</a>
       <a href="{feed_href}">RSS</a>
       <a class="nav-external" href="{site_repo}">GitHub</a>
       {lang_switch}
@@ -672,15 +679,15 @@ def page(
 """
 
 
-def post_card(post: Post, root: str) -> str:
+def post_card(post: Post, asset_root: str, lang_root: str) -> str:
     tags = "".join(
-        f'<a class="tag" href="{root}tags/{slug}.html">{html.escape(tag)}</a>'
+        f'<a class="tag" href="{lang_root}tags/{slug}.html">{html.escape(tag)}</a>'
         for tag, slug in post.tag_slugs()
     )
     return f"""<article class="post-card">
-  {f'<a class="post-card-cover" href="{root}{post.url}"><img src="{root}{html.escape(post.image)}" alt="" loading="lazy"></a>' if post.image else ''}
+  {f'<a class="post-card-cover" href="{lang_root}{post.url}"><img src="{asset_root}{html.escape(post.image)}" alt="" loading="lazy"></a>' if post.image else ''}
   <p class="post-meta"><time datetime="{post.date.isoformat()}">{post.date.isoformat()}</time></p>
-  <h2><a href="{root}{post.url}">{html.escape(post.title)}</a></h2>
+  <h2><a href="{lang_root}{post.url}">{html.escape(post.title)}</a></h2>
   <p class="post-summary">{html.escape(post.summary)}</p>
   {f'<p class="post-tags">{tags}</p>' if tags else ''}
 </article>"""
@@ -708,6 +715,26 @@ def alt_for(lang: str, path: str, base: str) -> tuple[str, str]:
     return f"{base}/{alt_path}", alt_path
 
 
+def roots(depth: int, lang: str) -> tuple[str, str]:
+    """(asset_root, lang_root) for a page sitting `depth` levels below the site root.
+
+    Two different bases are in play here, and conflating them broke images one
+    way and post links the other:
+
+    * **asset_root** points at the *site* root — /assets/, and the Chinese page
+      tree is one level deeper, so /zh/ pages need one more "../".
+    * **lang_root** points at the *language* root — index.html, posts/, tags/.
+      English's language root is the site root; Chinese's is /zh/.
+
+    So a /zh/posts/x.html page (depth 2) has asset_root="../../" but
+    lang_root="../", while a /zh/index.html page (depth 1) has
+    asset_root="../" but lang_root="".
+    """
+    asset_root = "../" * depth
+    lang_depth = depth - (1 if lang != "en" else 0)
+    return asset_root, "../" * lang_depth
+
+
 def render_index(
     config: dict[str, object],
     posts: list[Post],
@@ -718,10 +745,11 @@ def render_index(
     ui = UI_STRINGS[lang]
     base = str(config["base_url"]).rstrip("/")
     prefix = "" if lang == "en" else "zh/"
-    # The English index sits at the site root (depth 0); the Chinese index sits
-    # one level down under /zh/ (depth 1), so its relative links need "../".
-    index_root = "" if lang == "en" else "../"
-    cards = "\n".join(post_card(post, index_root) for post in posts) or (
+    # The Chinese index sits one level below the site root, so the two bases
+    # differ: covers resolve from the site root, post/tag links from the
+    # language root.
+    asset_root, lang_root = roots(0 if lang == "en" else 1, lang)
+    cards = "\n".join(post_card(post, asset_root, lang_root) for post in posts) or (
         f'<p class="muted">{ui["no_posts"]}</p>'
     )
     tag_cloud = ""
@@ -729,7 +757,7 @@ def render_index(
         tag_cloud = (
             '<p class="tag-cloud">'
             + "".join(
-                f'<a class="tag" href="{index_root}tags/{slug}.html">{html.escape(tag)} <span class="count">{count}</span></a>'
+                f'<a class="tag" href="{lang_root}tags/{slug}.html">{html.escape(tag)} <span class="count">{count}</span></a>'
                 for tag, slug, count in tags
             )
             + "</p>"
@@ -760,7 +788,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
     ui = UI_STRINGS[lang]
     base = str(config["base_url"]).rstrip("/")
     depth = 1 if lang == "en" else 2
-    root = "../" * depth
+    _asset_root, lang_root = roots(depth, lang)
     prefix = "" if lang == "en" else "zh/"
     # Body asset links are written as ../assets/… (correct from a depth-1
     # English post). A Chinese post sits one level deeper (/zh/posts/), so
@@ -771,7 +799,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
             'href="../assets/', 'href="../../assets/'
         )
     tags = "".join(
-        f'<a class="tag" href="{root}tags/{slug}.html">{html.escape(tag)}</a>'
+        f'<a class="tag" href="{lang_root}tags/{slug}.html">{html.escape(tag)}</a>'
         for tag, slug in post.tag_slugs()
     )
     edit = (
@@ -792,7 +820,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
   </div>
   <footer class="post-footer">
     <a href="{html.escape(edit)}">{ui['edit']}</a>
-    <a href="{root}index.html">{ui['all_posts']}</a>
+    <a href="{lang_root}index.html">{ui['all_posts']}</a>
   </footer>
 </article>"""
     alt_link, alt_href = alt_for(lang, post.url, base)
@@ -840,19 +868,21 @@ def render_tag_index(config: dict[str, object], tags: list[tuple[str, str, int]]
 
 def render_tag_page(config: dict[str, object], tag: str, posts: list[Post], lang: str = "en") -> str:
     cfg = lang_config(config, lang)
+    ui = UI_STRINGS[lang]
     base = str(config["base_url"]).rstrip("/")
     prefix = "" if lang == "en" else "zh/"
-    cards = "\n".join(post_card(post, "../") for post in posts)
+    asset_root, lang_root = roots(1 if lang == "en" else 2, lang)
+    cards = "\n".join(post_card(post, asset_root, lang_root) for post in posts)
     body = (
         f'<section class="hero"><h1>{html.escape(tag)}</h1>'
-        f'<p class="muted">{len(posts)} post(s)</p>'
-        f'<p><a href="index.html">← All tags</a></p></section>\n'
+        f'<p class="muted">{ui["post_count"].format(n=len(posts))}</p>'
+        f'<p><a href="index.html">{ui["all_tags"]}</a></p></section>\n'
         f'<section class="post-list">\n{cards}\n</section>'
     )
     alt_link, alt_href = alt_for(lang, f"tags/{slugify(tag)}.html", base)
     return page(
         config=cfg,
-        title=f"Tag: {tag}",
+        title=ui["tag_title"].format(tag=tag),
         body=body,
         depth=1 if lang == "en" else 2,
         canonical=f"{base}/{prefix}tags/{slugify(tag)}.html",
