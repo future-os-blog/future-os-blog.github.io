@@ -375,6 +375,7 @@ class Post:
     draft: bool = False
     body: str = ""
     source: str = ""  # repo-relative POSIX path, for the "edit this post" link
+    source_name: str = ""  # filename, used as the same-date tiebreaker
 
     @property
     def url(self) -> str:
@@ -478,6 +479,7 @@ def parse_post(path: Path, blog_dir: Path) -> Post:
         draft=draft,
         body=body,
         source=source,
+        source_name=path.name,
     )
 
 
@@ -494,7 +496,10 @@ def load_posts(blog_dir: Path, include_drafts: bool = False) -> list[Post]:
     duplicates = {slug for slug in slugs if slugs.count(slug) > 1}
     if duplicates:
         raise PostError(f"duplicate post slug(s): {', '.join(sorted(duplicates))}")
-    posts.sort(key=lambda post: (post.date, post.title), reverse=True)
+    # Newest first by date. Within one date the filename breaks the tie (its
+    # YYYY-MM-DD-slug form sorts the same way the files were named/added), so
+    # the index reads as reverse order of addition rather than by title.
+    posts.sort(key=lambda post: (post.date, post.source_name), reverse=True)
     return posts
 
 

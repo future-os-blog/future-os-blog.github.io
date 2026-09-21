@@ -142,6 +142,22 @@ class PostParsingTests(unittest.TestCase):
         with self.assertRaises(blog.PostError):
             blog.load_posts(root)
 
+    def test_index_orders_newest_first_by_date_then_filename(self):
+        """Reverse order of addition: date desc, and within a date the filename."""
+        root = make_blog(
+            {
+                # Same date: the title would sort B before A, but the filename
+                # (addition order) must win, so zeta then alpha.
+                "2026-01-01-alpha.md": post("Zeta title"),
+                "2026-01-01-zeta.md": post("Alpha title"),
+                "2026-03-03-newest.md": post("Newest"),
+            }
+        )
+        out = run_build(root)
+        index = (out / "index.html").read_text(encoding="utf-8")
+        positions = [index.index("Newest"), index.index("Alpha title"), index.index("Zeta title")]
+        self.assertEqual(positions, sorted(positions))
+
     def test_repository_relative_links_are_rejected(self):
         """They resolve in the tree and 404 on the site — fail the build instead."""
         root = make_blog(
