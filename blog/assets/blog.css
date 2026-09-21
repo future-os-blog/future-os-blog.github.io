@@ -145,6 +145,8 @@ a:focus-visible {
   min-height: 3.4rem;
 }
 
+/* Desktop: brand, then the nav pushed right, then the theme toggle, all on one
+   row (the wrap rules further down reorder these into two rows on a phone). */
 .brand {
   display: inline-flex;
   align-items: center;
@@ -152,6 +154,7 @@ a:focus-visible {
   color: var(--fg);
   font-weight: 650;
   letter-spacing: -0.012em;
+  flex: 0 1 auto;
 }
 
 .brand:hover {
@@ -173,6 +176,7 @@ a:focus-visible {
   align-items: center;
   gap: 1.15rem;
   font-size: 0.88rem;
+  margin-left: auto;
 }
 
 .site-nav a {
@@ -203,6 +207,7 @@ a:focus-visible {
   border-radius: 999px;
   width: 2rem;
   height: 2rem;
+  flex: 0 0 auto;
   cursor: pointer;
   line-height: 1;
   transition: border-color 0.15s ease, color 0.15s ease;
@@ -604,38 +609,55 @@ a:focus-visible {
   }
 
   /* The header carries brand + four nav links + a language switch + a theme
-     toggle; on a phone that is wide enough to collide, so let it wrap onto a
-     second line instead of squashing or overflowing. */
+     toggle. On a phone the nav cannot share a row with the brand without
+     squashing, and letting the toggle fall to a third row wastes a whole line.
+     So: row one is brand + toggle, row two is the nav. */
   .header-inner {
     flex-wrap: wrap;
-    gap: 0.15rem 0.75rem;
+    gap: 0.1rem 0.75rem;
     min-height: 0;
-    padding: 0.5rem 0;
+    padding: 0.55rem 0 0.15rem;
   }
 
   .brand {
     flex: 1 1 auto;
-    min-height: 2.5rem;
+    min-height: 2.4rem;
+  }
+
+  .theme-toggle {
+    order: 2;
   }
 
   .site-nav {
+    order: 3;
     flex: 1 1 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 0.15rem 0.35rem;
+    gap: 0 0.15rem;
     font-size: 0.88rem;
-    padding-bottom: 0.15rem;
+    margin-left: 0;
   }
 
   /* Touch targets: give every nav control a comfortable height instead of a
-     bare text run the thumb has to hit exactly. */
-  .site-nav a,
-  .site-nav .theme-toggle {
+     bare text run the thumb has to hit exactly. Negative first margin keeps
+     the row flush with the brand above it despite the padding. */
+  .site-nav a {
     display: inline-flex;
     align-items: center;
-    min-height: 2.25rem;
-    padding: 0 0.5rem;
+    min-height: 2.3rem;
+    padding: 0 0.55rem;
     border-radius: 8px;
+  }
+
+  .site-nav a:first-child {
+    margin-left: -0.55rem;
+  }
+
+  /* RSS is the one nav item a phone reader cannot use, and it is still offered
+     in the footer. Dropping it here lets the remaining four links sit with real
+     breathing room instead of filling 91% of the row. */
+  .site-nav .nav-rss {
+    display: none;
   }
 
   .site-nav .nav-external::after {

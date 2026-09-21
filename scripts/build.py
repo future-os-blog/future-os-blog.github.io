@@ -697,7 +697,10 @@ def page(
     nav_posts = ui["nav_posts"]
     nav_tags = ui["nav_tags"]
     lang_switch = (
-        f'<a class="lang-switch" href="{lang_root}{alt_href}" hreflang="{ALT_LANG[lang]}">{LANG_LABEL[lang]}</a>'
+        # The switch crosses into the *other* language tree, so it resolves from
+        # the site root (asset_root), not the language root. Using lang_root
+        # here made a Chinese page link back to itself.
+        f'<a class="lang-switch" href="{root}{alt_href}" hreflang="{ALT_LANG[lang]}">{LANG_LABEL[lang]}</a>'
         if alt_href
         else ""
     )
@@ -730,11 +733,11 @@ def page(
     <nav class="site-nav">
       <a href="{lang_root}index.html">{nav_posts}</a>
       <a href="{lang_root}tags/index.html">{nav_tags}</a>
-      <a href="{feed_href}">RSS</a>
+      <a class="nav-rss" href="{feed_href}">RSS</a>
       <a class="nav-external" href="{site_repo}">GitHub</a>
       {lang_switch}
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="{ui['theme_label']}">◐</button>
     </nav>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="{ui['theme_label']}">◐</button>
   </div>
 </header>
 <main id="main" class="wrap">

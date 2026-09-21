@@ -443,7 +443,36 @@ class ChineseMirrorTests(unittest.TestCase):
         self.assertNotIn("测试博客", en_index)
         self.assertIn("贝塔", post_html)
 
-    def test_hreflang_and_language_switch_cross_link(self):
+    def test_language_switch_points_at_the_other_language(self):
+        """Regression: the switch must resolve from the site root, not the
+        language root, or a Chinese page links back to itself."""
+        import posixpath
+
+        alpha = post("Alpha", body="Body.")
+        out = run_build(
+            make_blog(
+                {"2026-01-01-alpha.md": alpha},
+                zh_posts={"2026-01-01-alpha.md": alpha},
+            )
+        )
+        cases = [
+            ("index.html", "zh/index.html"),
+            ("posts/alpha.html", "zh/posts/alpha.html"),
+            ("tags/index.html", "zh/tags/index.html"),
+            ("zh/index.html", "index.html"),
+            ("zh/posts/alpha.html", "posts/alpha.html"),
+            ("zh/tags/index.html", "tags/index.html"),
+        ]
+        for served, expected in cases:
+            html = (out / served).read_text(encoding="utf-8")
+            match = re.search(r'<a class="lang-switch" href="([^"]+)"', html)
+            self.assertIsNotNone(match, served)
+            resolved = posixpath.normpath(
+                posixpath.join(posixpath.dirname("/" + served), match.group(1))
+            )
+            self.assertEqual(resolved, "/" + expected, f"on /{served}")
+
+    def test_hreflang_alternate_points_across_languages(self):
         out = self.build(zh_posts={"2026-01-01-alpha.md": post("阿尔法", body="正文。")})
         en_post = (out / "posts" / "alpha.html").read_text(encoding="utf-8")
         zh_post = (out / "zh" / "posts" / "alpha.html").read_text(encoding="utf-8")
