@@ -91,9 +91,9 @@ Two details keep the handshake honest:
 
 ![The pairing handshake and the record layout](../assets/e2ee/protocol.png)
 
-*Figure 2: left — the pairing and handshake sequence (XXpsk0 for the first
+*Figure 2: top — the pairing and handshake sequence (XXpsk0 for the first
 pairing, IK for every reconnect, with the candidate-readiness handoff in
-between); right — the binary record every application message is wrapped in.*
+between); bottom — the binary record every application message is wrapped in.*
 
 Everything after the handshake travels as binary records encrypted with
 ChaCha20-Poly1305, using the two directional keys from the Noise `Split`. Rust

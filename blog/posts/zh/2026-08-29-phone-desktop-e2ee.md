@@ -48,7 +48,7 @@ FutureOS Mobile 让你的手机驱动桌面上的会话：读流式回复、发�
 
 ![配对握手与记录布局](../assets/e2ee/protocol.png)
 
-*图 2：左——配对与握手时序（首次配对用 XXpsk0，每次重连用 IK，中间是候选就绪交接）；右——每条应用消息都被包裹进去的二进制记录。*
+*图 2：上——配对与握手时序（首次配对用 XXpsk0，每次重连用 IK，中间是候选就绪交接）；下——每条应用消息都被包裹进去的二进制记录。*
 
 握手之后的一切都作为二进制记录传输，用 ChaCha20-Poly1305 加密，密钥来自 Noise `Split` 得到的两个方向密钥。Rust 用 `snow` 和 `chacha20poly1305`；Mobile 用 `noise-handshake`（纯 JS 的 sodium 后端）做握手、`@noble/ciphers` 做记录。独立的记录层之所以存在，是因为 NATS 消息可能超过 Noise 的 65,535 字节传输上限。
 

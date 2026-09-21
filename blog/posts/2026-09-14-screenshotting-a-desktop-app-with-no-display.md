@@ -12,9 +12,9 @@ Here is a constraint that sounds like it should make screenshots impossible: the
 
 The trick is that "the app is not running" only means the *backend* isn't. The frontend — the part a screenshot is *of* — is just a web page. And a web page can be rendered by a browser that has no screen.
 
-![The FutureOS desktop interface, rendered by the screenshot harness with no display attached](../assets/shots/main-en.png)
+![The FutureOS desktop app's sidebar, rendered by the screenshot harness with no display attached](../assets/shots/main-en.png)
 
-*This very image was produced by the harness it describes. The interface is real; the machine that rendered it had no display.*
+*This very image was produced by the harness it describes, cropped to the sidebar so the labels are still legible on a phone. The interface is real; the machine that rendered it had no display.*
 
 ## The three ingredients
 
