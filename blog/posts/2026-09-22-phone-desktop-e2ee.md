@@ -1,6 +1,6 @@
 ---
 title: "End-to-end encryption between your phone and your desktop"
-date: 2026-09-23
+date: 2026-09-22
 tags: [agent, mobile, desktop, security, e2ee]
 summary: FutureOS Mobile controls sessions on your desktop over a NATS relay. The relay is on the public network, so it has to be treated as hostile — able to drop, reorder, replay and fabricate messages, but never able to read a command or forge one. Here's how the v2 channel achieves that with a Noise handshake and a ChaCha20-Poly1305 record layer.
 author: FutureOS

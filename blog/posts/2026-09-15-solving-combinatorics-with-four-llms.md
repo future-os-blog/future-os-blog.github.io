@@ -1,6 +1,6 @@
 ---
 title: "Solving a combinatorics problem with a team of four LLMs"
-date: 2026-09-21
+date: 2026-09-15
 tags: [agent, loop, multi-agent, llm, experiments]
 summary: We gave a 16×16 tiling problem to four different models working in parallel under the future-loop control plane. Over 4.5 hours and 15 rounds the answer went from 30 to a verified 21 — and the two decisive breaks came from different models disagreeing with each other, not from any single model reasoning harder.
 author: FutureOS
