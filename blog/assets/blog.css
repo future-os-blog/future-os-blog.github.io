@@ -397,15 +397,21 @@ a:focus-visible {
 }
 
 /* The cover leads the article. Shown whole rather than cropped to the cards'
-   21:9, and given the header's border room to breathe. */
+   21:9, with the header's rule separating it from the text below. */
 .post-cover {
   display: block;
   width: 100%;
   height: auto;
-  margin: 1.75rem 0 2rem;
+  margin: 2.75rem 0 0;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg-raise);
+}
+
+/* The cover already supplies the top space, so the header does not need its
+   full opening padding when it follows one. */
+.post-cover + .post-header {
+  padding-top: 1.75rem;
 }
 
 .prose {
@@ -772,11 +778,15 @@ a:focus-visible {
     aspect-ratio: 16 / 9;
   }
 
-  /* The article cover is the first thing under the title on a phone, so pull
-     it tight against the header rather than leaving a desktop-sized gap. */
+  /* The article cover opens the page on a phone — keep it tight to the top so
+     the title is not pushed far down the first screen. */
   .post-cover {
-    margin: 1.25rem 0 1.5rem;
+    margin: 1.5rem 0 0;
     border-radius: 10px;
+  }
+
+  .post-cover + .post-header {
+    padding-top: 1.25rem;
   }
 
   .post-card h2 {

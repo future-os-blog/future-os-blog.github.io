@@ -694,6 +694,11 @@ class StylesheetTests(unittest.TestCase):
         self.assertIn(".theme-toggle-icon::before", self.css)
         self.assertIn('[data-theme="light"] .theme-toggle-icon::before', self.css)
 
+    def test_header_padding_collapses_under_a_cover(self):
+        """The cover supplies the top space; without this the title would sit
+        under both the cover's margin and the header's full opening padding."""
+        self.assertIn(".post-cover + .post-header", self.css)
+
 
 class LinkPreviewTests(unittest.TestCase):
     """What a chat app or social scraper sees when someone shares a post. A
@@ -852,10 +857,10 @@ class PostCoverTests(unittest.TestCase):
         html = (out / "posts" / "plain.html").read_text(encoding="utf-8")
         self.assertNotIn("post-cover", html)
 
-    def test_cover_sits_between_the_header_and_the_body(self):
+    def test_cover_leads_the_article_above_the_title(self):
         html = (self.out / "posts" / "a.html").read_text(encoding="utf-8")
-        self.assertLess(html.index('class="post-header"'), html.index('class="post-cover"'))
-        self.assertLess(html.index('class="post-cover"'), html.index('class="prose"'))
+        self.assertLess(html.index('class="post-cover"'), html.index('class="post-header"'))
+        self.assertLess(html.index('class="post-header"'), html.index('class="prose"'))
 
 
 if __name__ == "__main__":

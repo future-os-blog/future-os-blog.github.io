@@ -1032,7 +1032,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
             f'\n  <img class="post-cover" src="{asset_root}{html.escape(post.image)}"'
             f'{size_attrs} alt="" decoding="async" />'
         )
-    body = f"""<article class="post">
+    body = f"""<article class="post">{cover}
   <header class="post-header">
     <h1>{html.escape(post.title)}</h1>
     <p class="post-meta">
@@ -1040,7 +1040,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
       {author}
     </p>
     {f'<p class="post-tags">{tags}</p>' if tags else ''}
-  </header>{cover}
+  </header>
   <div class="prose">
 {body_html}
   </div>
