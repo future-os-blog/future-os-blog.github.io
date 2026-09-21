@@ -14,10 +14,6 @@ travel between the two devices over a NATS relay.
 That relay is on the public network. Which means the design has to start from an
 uncomfortable assumption: **the broker is hostile.**
 
-![FutureOS Desktop](../assets/e2ee/desktop-app.png)
-
-*Figure 1: the desktop app — where the sessions, tools and files actually live.*
-
 ## The threat model
 
 A malicious relay can drop, delay, reorder, replay, reroute and fabricate
@@ -51,9 +47,11 @@ paste the text — carries `v=2`, the platform code, the `desktopId`, the NATS
 Treat the whole invitation as a short-lived bearer credential: it's valid for
 five minutes and usable once. Don't share it or post a screenshot of it.
 
-![FutureOS Mobile](../assets/e2ee/mobile-app.png)
+![Pairing a phone from the desktop](../assets/e2ee/desktop-pairing-qr.png)
 
-*Figure 2: the mobile app — driving a desktop session from a phone.*
+*Figure 1: pairing a phone from the desktop. The QR encodes the one-time,
+five-minute invitation; once the handshake completes the desktop deletes the
+PSK and the invitation is spent.*
 
 The phone generates its own X25519 identity and stores the bundle in Expo
 SecureStore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`); the desktop stores its pairing
@@ -89,6 +87,12 @@ Two details keep the handshake honest:
   chunks.
 
 ## The record layer
+
+![The pairing handshake and the record layout](../assets/e2ee/protocol.png)
+
+*Figure 2: left — the pairing and handshake sequence (XXpsk0 for the first
+pairing, IK for every reconnect, with the candidate-readiness handoff in
+between); right — the binary record every application message is wrapped in.*
 
 Everything after the handshake travels as binary records encrypted with
 ChaCha20-Poly1305, using the two directional keys from the Noise `Split`. Rust
