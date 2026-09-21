@@ -336,17 +336,17 @@ class MarkdownRenderer:
             href = groups["link_href"]
             external = href.startswith(("http://", "https://"))
             rel = ' rel="noopener"' if external else ""
-            return f'<a href="{href}"{title}{rel}>{soften_long_token(groups["link_text"])}</a>'
+            return f'<a href="{href}"{title}{rel}>{render_nested(groups["link_text"])}</a>'
         if groups["strong"] is not None:
-            return f"<strong>{groups['strong']}</strong>"
+            return f"<strong>{render_nested(groups['strong'])}</strong>"
         if groups["strong_"] is not None and self._underscore_ok(match):
-            return f"<strong>{groups['strong_']}</strong>"
+            return f"<strong>{render_nested(groups['strong_'])}</strong>"
         if groups["strike"] is not None:
-            return f"<del>{groups['strike']}</del>"
+            return f"<del>{render_nested(groups['strike'])}</del>"
         if groups["em"] is not None:
-            return f"<em>{groups['em']}</em>"
+            return f"<em>{render_nested(groups['em'])}</em>"
         if groups["em_"] is not None and self._underscore_ok(match):
-            return f"<em>{groups['em_']}</em>"
+            return f"<em>{render_nested(groups['em_'])}</em>"
         return match.group(0)
 
     @staticmethod
@@ -600,6 +600,27 @@ def _soften_run(run: str) -> str:
         if char in BREAK_SOFTEN_AFTER:
             out.append("<wbr>")
     return "".join(out)
+
+
+# Inline code may nest inside another inline construct — `[`future.proto`](url)`
+# cites a repo path, `**`summarized`**` emphasises an arm name. The outer
+# alternative in INLINE_RE matches first and captures its inner text verbatim,
+# so without this the backticks would be emitted literally and the reader would
+# see ``future.proto`` with visible backticks. Render the code spans, and still
+# soften long plain-text runs inside.
+CODE_IN_TEXT_RE = re.compile(r"`([^`]+)`")
+
+
+def render_nested(text: str) -> str:
+    """Render inline code nested inside emphasis/link text."""
+    parts: list[str] = []
+    cursor = 0
+    for match in CODE_IN_TEXT_RE.finditer(text):
+        parts.append(soften_long_token(text[cursor : match.start()]))
+        parts.append(f"<code>{match.group(1)}</code>")
+        cursor = match.end()
+    parts.append(soften_long_token(text[cursor:]))
+    return "".join(parts)
 
 
 # ── Internationalization ────────────────────────────────────────────────────

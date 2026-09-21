@@ -10,7 +10,7 @@ The question came up while we were wiring the desktop to the agent: why are we h
 
 ## What the wire actually looks like
 
-The whole contract is a 1272-line protobuf file (`packages/rpc/proto/future.proto`) defining one service with two methods:
+The whole contract is a 1272-line protobuf file ([`future.proto`](https://github.com/futuregene/future-os/blob/main/packages/rpc/proto/future.proto)) defining one service with two methods:
 
 ```proto
 service FutureAgent {

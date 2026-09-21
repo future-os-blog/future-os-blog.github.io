@@ -232,6 +232,28 @@ class MarkdownTests(unittest.TestCase):
         self.assertIn("<del>gone</del>", html)
         self.assertIn("<em>under</em>", html)
 
+    def test_code_nested_in_emphasis_is_rendered(self):
+        """**`summarized`** is how an arm name is emphasised in a table cell."""
+        html = render("**`summarized`** (ours, default)\n")
+        self.assertIn("<strong><code>summarized</code></strong> (ours, default)", html)
+        self.assertNotIn("`", html)
+        self.assertIn("<em><code>x</code></em>", render("*`x`*\n"))
+
+    def test_code_span_inside_link_text_is_rendered_not_literal(self):
+        """[`path`](url) is how a repo path is cited. The backticks must become a
+        <code> element, not be emitted literally into the page."""
+        html = render("see [`future.proto`](https://example.test/a/b.proto) here\n")
+        self.assertIn(
+            '<a href="https://example.test/a/b.proto" rel="noopener"><code>future.proto</code></a>',
+            html,
+        )
+        self.assertNotIn("`", html)
+
+    def test_plain_and_code_link_text_both_work(self):
+        html = render("[plain](https://a.test) and [`code`](https://b.test)\n")
+        self.assertIn('<a href="https://a.test" rel="noopener">plain</a>', html)
+        self.assertIn('<a href="https://b.test" rel="noopener"><code>code</code></a>', html)
+
     def test_long_code_token_gains_break_opportunities(self):
         """A wide path must be breakable at its separators, not pushed whole
         onto the next line (which leaves the line before it nearly empty)."""

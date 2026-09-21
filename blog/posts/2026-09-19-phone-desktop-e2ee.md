@@ -137,7 +137,7 @@ subjects stay visible — the protocol doesn't claim metadata confidentiality.
 
 ## How it's checked
 
-`packages/remote-crypto/tests/vectors.json` is verified by both Rust/snow and
+[`vectors.json`](https://github.com/futuregene/future-os/blob/main/packages/remote-crypto/tests/vectors.json) is verified by both Rust/snow and
 Mobile against deterministic public test keys, covering XXpsk0, IK, handshake
 hashes, record bytes, AAD and reply association — so the two independent
 implementations produce byte-identical output.
@@ -165,4 +165,4 @@ context folded in; and recovery paths refuse to trust unsigned discovery.
 
 The protocol and threat boundary are specified in
 [`REMOTE_E2EE.md`](https://github.com/futuregene/future-os/blob/main/docs/internals/desktop/REMOTE_E2EE.md)
-in the FutureOS repo; the shared crypto crate is `packages/remote-crypto`.
+in the FutureOS repo; the shared crypto crate is [`remote-crypto`](https://github.com/futuregene/future-os/tree/main/packages/remote-crypto).

@@ -461,6 +461,17 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 
+/* Code inside a link — how a repo path is cited, e.g. [future.proto](…) —
+   should read as a link, not as a code pill: keep the monospace face (it
+   signals "this is a path"), drop the background and padding, and take the
+   link's colour so it is obviously clickable. */
+.prose a code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
 .prose pre {
   background: var(--bg-code);
   border: 1px solid var(--border);

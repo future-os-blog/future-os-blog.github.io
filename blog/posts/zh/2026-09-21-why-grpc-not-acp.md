@@ -10,7 +10,7 @@ image: assets/covers/why-grpc-not-acp.png
 
 ## 线路上到底长什么样
 
-整份契约就是一个 1272 行的 protobuf 文件（`packages/rpc/proto/future.proto`），定义了一个只有两个方法的服务：
+整份契约就是一个 1272 行的 protobuf 文件（[`future.proto`](https://github.com/futuregene/future-os/blob/main/packages/rpc/proto/future.proto)），定义了一个只有两个方法的服务：
 
 ```proto
 service FutureAgent {

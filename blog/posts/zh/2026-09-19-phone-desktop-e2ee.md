@@ -74,7 +74,7 @@ nonce 是四个零字节接上 8 字节序列号。每个方向有独立的密�
 
 ## 如何校验
 
-`packages/remote-crypto/tests/vectors.json` 由 Rust/snow 和 Mobile 双方针对确定性的公开测试密钥做验证，覆盖 XXpsk0、IK、握手哈希、记录字节、AAD 和回复关联——所以两个独立实现产生字节一致的输出。
+[`vectors.json`](https://github.com/futuregene/future-os/blob/main/packages/remote-crypto/tests/vectors.json) 由 Rust/snow 和 Mobile 双方针对确定性的公开测试密钥做验证，覆盖 XXpsk0、IK、握手哈希、记录字节、AAD 和回复关联——所以两个独立实现产生字节一致的输出。
 
 测试套件还覆盖了逐字节篡改、错误的 PSK/prologue/key、重放与反射、大记录、丢失确认、固定 key 重连、过期凭据刷新、持久化失败、邀请重用/过期、就绪交接、本地失效，以及一条穿过真实 Desktop NATS 命令循环的加密请求。验证快照（Rust clippy `-D warnings`、1167 个桌面后端测试、967 个桌面 Vitest 测试、900 个移动端 Jest 测试）在仓库的验证快照里。
 
@@ -86,4 +86,4 @@ nonce 是四个零字节接上 8 字节序列号。每个方向有独立的密�
 
 协议与威胁边界在 FutureOS 仓库的
 [`REMOTE_E2EE.md`](https://github.com/futuregene/future-os/blob/main/docs/internals/desktop/REMOTE_E2EE.md)
-里有完整规定；共享的加密 crate 是 `packages/remote-crypto`。
+里有完整规定；共享的加密 crate 是 [`remote-crypto`](https://github.com/futuregene/future-os/tree/main/packages/remote-crypto)。

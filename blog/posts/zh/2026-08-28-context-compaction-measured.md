@@ -9,7 +9,7 @@ image: assets/covers/context-compaction-measured.png
 
 一个长 agent 会话迟早会把上下文窗口填满，总得有东西被扔掉。每种压缩策略对同一个问题给出不同答案：你留下什么？
 
-我们测了三种答案——FutureOS 的默认策略、OpenCode、Codex——用同一个模型、同一组问题、同一种调用形态。唯一改变的是一次压缩留下什么。下面全部内容都可以用 FutureOS 仓库里 `scripts/compaction_experiment/` 复现。外部实现固定到 Codex `b13164d8` 和 OpenCode `e03db9bc`（包 1.18.31）；之后的提交会让这些数字失效。
+我们测了三种答案——FutureOS 的默认策略、OpenCode、Codex——用同一个模型、同一组问题、同一种调用形态。唯一改变的是一次压缩留下什么。下面全部内容都可以用 FutureOS 仓库里 [`compaction_experiment/`](https://github.com/futuregene/future-os/tree/main/scripts/compaction_experiment) 复现。外部实现固定到 Codex `b13164d8` 和 OpenCode `e03db9bc`（包 1.18.31）；之后的提交会让这些数字失效。
 
 ## 考试
 
@@ -183,4 +183,4 @@ python3 scripts/compaction_experiment/run_closed_book.py \
 
 输入、账本和结果放在任何仓库之外（含真实会话数据）。合成链可以从带种子的生成器逐字节重新生成；真实会话链根本无法发布，所以第三方复现那一半意味着换成你自己的会话——绝对数字会不同，但比较应该成立。引用任何数字前，先跑 `verify_request_shape.py`：它不需要模型，检查考试是否仍在发送生产环境的提示和工具。
 
-完整方法、运行时策略和两份实验报告在 [FutureOS 仓库](https://github.com/futuregene/future-os)的 `docs/internals/compaction/` 下；图表由 `scripts/compaction_experiment/sharing_figures.py` 生成。
+完整方法、运行时策略和两份实验报告在 [FutureOS 仓库](https://github.com/futuregene/future-os)的 `docs/internals/compaction/` 下；图表由 `compaction_experiment/` 里的 `sharing_figures.py` 生成。
