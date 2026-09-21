@@ -44,6 +44,7 @@ DEFAULT_CONFIG = {
     "repo_branch": "main",
     "feed_size": 20,
     "i18n": {},
+    "giscus": {},
 }
 
 # ── Markdown ────────────────────────────────────────────────────────────────
@@ -643,6 +644,8 @@ UI_STRINGS = {
         "all_tags": "← All tags",
         "post_count": "{n} post(s)",
         "tag_title": "Tag: {tag}",
+        "comments_heading": "Comments",
+        "comments_hint": "Comments are powered by giscus and GitHub Discussions; you need a GitHub account to post.",
         "no_posts": "No posts yet.",
         "no_tags": "No tags yet.",
     },
@@ -657,6 +660,8 @@ UI_STRINGS = {
         "all_tags": "← 全部标签",
         "post_count": "{n} 篇",
         "tag_title": "标签：{tag}",
+        "comments_heading": "评论",
+        "comments_hint": "评论由 giscus 与 GitHub Discussions 驱动，需要 GitHub 账号才能发表。",
         "no_posts": "还没有文章。",
         "no_tags": "还没有标签。",
     },
@@ -856,6 +861,53 @@ def render_index(
     )
 
 
+def render_comments(config: dict[str, object], post: Post, lang: str) -> str:
+    """The giscus block appended to a post page.
+
+    Disabled unless config["giscus"]["enabled"] is true. Both languages map
+    `pathname` to the post slug, so the English and Chinese copies of an
+    article share one Discussion thread.
+    """
+    g = config.get("giscus")
+    if not isinstance(g, dict) or not g.get("enabled"):
+        return ""
+    for key in ("repo", "repo_id", "category", "category_id"):
+        if not g.get(key):
+            raise PostError(f"giscus is enabled but blog.json is missing giscus.{key}")
+    mapping = str(g.get("mapping", "pathname"))
+    giscus_lang = "zh-CN" if lang == "zh" else "en"
+    # data-term: the thread key. Slugs are date-free and unique, so both
+    # languages of one article land in the same Discussion.
+    term = post.slug
+    attrs = {
+        "src": "https://giscus.app/client.js",
+        "data-repo": str(g["repo"]),
+        "data-repo-id": str(g["repo_id"]),
+        "data-category": str(g["category"]),
+        "data-category-id": str(g["category_id"]),
+        "data-mapping": mapping,
+        "data-term": term,
+        "data-strict": "1",
+        "data-reactions-enabled": "1",
+        "data-emit-metadata": "0",
+        "data-input-position": "bottom",
+        "data-theme": "preferred_color_scheme",
+        "data-lang": giscus_lang,
+        "data-loading": "lazy",
+        "crossorigin": "anonymous",
+        "async": "",
+    }
+    ui = UI_STRINGS[lang]
+    script = " ".join(
+        f'{name}="{html.escape(value)}"' if value else name for name, value in attrs.items()
+    )
+    return f"""<section class="comments" id="comments" aria-label="{html.escape(ui['comments_heading'])}">
+  <h2 class="comments-heading">{html.escape(ui['comments_heading'])}</h2>
+  <p class="comments-hint muted">{html.escape(ui['comments_hint'])}</p>
+  <script {script}></script>
+</section>"""
+
+
 def render_post(config: dict[str, object], post: Post, body_html: str, lang: str = "en") -> str:
     cfg = lang_config(config, lang)
     ui = UI_STRINGS[lang]
@@ -876,6 +928,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
         for tag, slug in post.tag_slugs()
     )
     author = f'<span class="post-author">{html.escape(post.author)}</span>' if post.author else ""
+    comments = render_comments(config, post, lang)
     body = f"""<article class="post">
   <header class="post-header">
     <h1>{html.escape(post.title)}</h1>
@@ -888,6 +941,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
   <div class="prose">
 {body_html}
   </div>
+  {comments}
   <footer class="post-footer">
     <a href="{lang_root}index.html">{ui['all_posts']}</a>
   </footer>

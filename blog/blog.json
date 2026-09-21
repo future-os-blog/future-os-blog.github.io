@@ -14,5 +14,13 @@
       "tagline": "构建「一个无处不在的 agent」的随笔",
       "description": "FutureOS 团队的工程笔记：agent 内部机制、RPC 线路协议、loop 编排，以及建立在其上的桌面 / 移动端 / 终端界面。"
     }
+  },
+  "giscus": {
+    "enabled": false,
+    "repo": "future-os-blog/future-os-blog.github.io",
+    "repo_id": "R_kgDOUjEbmg",
+    "category": "Announcements",
+    "category_id": "DIC_kwDOUjEbms4DGEZZ",
+    "mapping": "pathname"
   }
 }

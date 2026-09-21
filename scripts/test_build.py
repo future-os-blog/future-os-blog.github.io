@@ -566,5 +566,62 @@ class ChineseMirrorTests(unittest.TestCase):
         self.assertNotIn('href="../../index.html"', zh_post)
 
 
+class GiscusTests(unittest.TestCase):
+    GISCUS = {
+        "enabled": True,
+        "repo": "o/r",
+        "repo_id": "R_x",
+        "category": "Announcements",
+        "category_id": "DIC_x",
+        "mapping": "pathname",
+    }
+
+    def config(self, **overrides):
+        cfg = dict(CONFIG)
+        cfg["giscus"] = {**self.GISCUS, **overrides}
+        return cfg
+
+    def test_disabled_by_default(self):
+        out = run_build(make_blog({"2026-01-01-a.md": post("A")}))
+        html = (out / "posts" / "a.html").read_text(encoding="utf-8")
+        self.assertNotIn("giscus.app", html)
+
+    def test_enabled_renders_giscus_with_real_attrs(self):
+        out = run_build(make_blog({"2026-01-01-alpha.md": post("Alpha")}, config=self.config()))
+        html = (out / "posts" / "alpha.html").read_text(encoding="utf-8")
+        self.assertIn('src="https://giscus.app/client.js"', html)
+        self.assertIn('data-repo="o/r"', html)
+        self.assertIn('data-repo-id="R_x"', html)
+        self.assertIn('data-category="Announcements"', html)
+        self.assertIn('data-term="alpha"', html)
+        self.assertIn('data-lang="en"', html)
+
+    def test_en_and_zh_share_one_thread_and_zh_uses_zh_lang(self):
+        alpha = post("Alpha", body="Body.")
+        out = run_build(
+            make_blog(
+                {"2026-01-01-alpha.md": alpha},
+                config=self.config(),
+                zh_posts={"2026-01-01-alpha.md": alpha},
+            )
+        )
+        en = (out / "posts" / "alpha.html").read_text(encoding="utf-8")
+        zh = (out / "zh" / "posts" / "alpha.html").read_text(encoding="utf-8")
+        # Both languages key the thread to the same slug.
+        self.assertIn('data-term="alpha"', en)
+        self.assertIn('data-term="alpha"', zh)
+        self.assertIn('data-lang="en"', en)
+        self.assertIn('data-lang="zh-CN"', zh)
+
+    def test_enabled_with_missing_ids_fails(self):
+        with self.assertRaises(blog.PostError):
+            run_build(
+                make_blog(
+                    {"2026-01-01-a.md": post("A")},
+                    config=self.config(repo_id=""),
+                )
+            )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

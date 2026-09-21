@@ -561,6 +561,33 @@ a:focus-visible {
   margin: 0.25rem 0;
 }
 
+/* ── Comments (giscus) ──────────────────────────────────────────────────────
+   Only rendered when blog.json has giscus.enabled = true. Kept inside the
+   reading column and separated from the article footer so the section reads
+   as an invitation, not an afterthought. */
+.comments {
+  margin-top: 2.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.comments-heading {
+  margin: 0 0 0.4rem;
+  font-size: 1.14rem;
+  letter-spacing: -0.012em;
+}
+
+.comments-hint {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+}
+
+/* giscus mounts an iframe inside its own .giscus wrapper; let it span the
+   column and not introduce an unexpected minimum width. */
+.comments .giscus {
+  width: 100%;
+}
+
 .muted {
   color: var(--fg-muted);
 }
