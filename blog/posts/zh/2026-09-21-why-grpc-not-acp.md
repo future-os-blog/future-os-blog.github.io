@@ -3,7 +3,7 @@ title: "为什么我们选了 gRPC，而不是 ACP"
 date: 2026-09-21
 tags: [protocol, grpc, acp, desktop, architecture]
 description: "FutureOS 让一个 agent 同时支撑终端 UI、桌面应用、IM 机器人和 CLI——它们都通过一个小巧的两方法 gRPC 服务与之通信。ACP 是 Zed 推出的「编辑器↔agent」协议。真正拍板的是两点：一个 agent 要同时服务多个客户端，以及 gRPC 的流式成熟而 ACP 没有 pub/sub。"
-image: assets/covers/why-grpc-not-acp.png
+image: assets/covers/why-grpc-not-acp.jpg
 ---
 
 在把桌面端接到 agent 的过程中，有人提出了一个问题：既然 Agent Client Protocol（ACP）就是为「UI 与 agent 通信」这件事而生的，我们为什么还要手写一套 gRPC 协议？这个质疑很合理。答案并不是 ACP 不好——而是我们的两个硬性要求恰好落在 ACP 的能力边界之外：一个 agent 要同时服务多个客户端，而我们需要的流式能力，gRPC 原生具备、ACP 却几乎没有。

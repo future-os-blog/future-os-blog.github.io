@@ -2,7 +2,7 @@
 title: "给一个没有显示器的桌面应用截图"
 date: 2026-09-14
 author: FutureOS Engineering
-image: assets/covers/screenshotting-a-desktop-app-with-no-display.png
+image: assets/covers/screenshotting-a-desktop-app-with-no-display.jpg
 tags: [desktop, tooling, internals]
 summary: "FutureOS 的每一张产品截图和演示视频——包括本博客里的配图——都是对着 mock 数据、在无头 Chrome 里驱动真实 React UI 渲染出来的。没有显示器、没有运行中的应用、没有手画的 mockup。同一套工具还兼任 UI 回归测试。"
 description: "FutureOS 如何在没有显示器的机器上，从真实界面生成桌面和移动端的截图与视频：一个场景文件、一个 mock 后端、无头 Chrome，以及 Chrome DevTools Protocol。"

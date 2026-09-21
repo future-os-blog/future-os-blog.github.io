@@ -4,7 +4,7 @@ date: 2026-08-22
 tags: [agent, loop, multi-agent, architecture]
 summary: A chat loses context. future-loop turns "keep an eye on this for a week" into a durable goal — a todo graph, human gates, per-step evidence, and a verifiable definition of done that survives sessions, restarts, and parallel workers. This is how the control plane works, and how it carried the Matilda tiling run.
 author: FutureOS
-image: assets/covers/loop-engineering.png
+image: assets/covers/loop-engineering.jpg
 ---
 
 An AI agent is good at one bounded turn. It is bad at "keep an eye on this for a

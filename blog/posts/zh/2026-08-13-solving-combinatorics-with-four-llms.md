@@ -4,7 +4,7 @@ date: 2026-08-13
 tags: [agent, loop, multi-agent, llm, experiments]
 summary: 我们把一道 16×16 铺砖题交给四个不同的模型，在 future-loop 控制平面下并行求解。4.5 小时、15 轮，答案从 30 一路降到经验证的 21——而两次决定性的突破都来自不同模型之间的分歧，而不是哪个模型想得更狠。
 author: FutureOS
-image: assets/covers/solving-combinatorics-with-four-llms.png
+image: assets/covers/solving-combinatorics-with-four-llms.jpg
 ---
 
 取一个 16×16 的单位方格网格。在上面摆放轴对齐的矩形，使得每一行、每一列都恰好留下一个未被覆盖的方格。最少需要多少个矩形？

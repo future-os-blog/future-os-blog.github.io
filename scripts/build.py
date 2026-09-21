@@ -691,6 +691,42 @@ def asset_version(name: str) -> str:
     return digest[:10]
 
 
+def image_dimensions(rel_path: str) -> tuple[int, int] | None:
+    """(width, height) of a blog asset, read from the file header.
+
+    Declaring og:image:width/height tells a scraper the thumbnail is big enough
+    to use before it downloads it. Stdlib-only, like the rest of the build: the
+    PNG IHDR and the JPEG SOF marker both carry the size near the front.
+    """
+    if _ASSET_DIR is None:
+        return None
+    path = _ASSET_DIR.parent / rel_path
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(32)
+            if head[:8] == b"\x89PNG\r\n\x1a\n":
+                return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+            if head[:2] != b"\xff\xd8":
+                return None
+            handle.seek(2)
+            while True:
+                marker = handle.read(2)
+                if len(marker) < 2 or marker[0] != 0xFF:
+                    return None
+                # SOF0-SOF15 (except the non-frame DHT/JPG/DAC markers) carry it.
+                if 0xC0 <= marker[1] <= 0xCF and marker[1] not in (0xC4, 0xC8, 0xCC):
+                    handle.read(3)  # length (2) + precision (1)
+                    height = int.from_bytes(handle.read(2), "big")
+                    width = int.from_bytes(handle.read(2), "big")
+                    return width, height
+                length = int.from_bytes(handle.read(2), "big")
+                if length < 2:
+                    return None
+                handle.seek(length - 2, 1)
+    except OSError:
+        return None
+
+
 def page(
     *,
     config: dict[str, object],
@@ -719,6 +755,35 @@ def page(
     )
     # The feed lives at the language root (site root for English, /zh/ for Chinese).
     feed_href = f"{lang_root}feed.xml"
+    # Link preview (WeChat Moments, Slack, X…). The image is what those
+    # scrapers turn into a thumbnail; og:image:width/height let one decide the
+    # image is big enough *before* downloading it — a huge file just times out
+    # and shows a broken-link placeholder.
+    social = ""
+    if image:
+        image_url = f"{base}/{html.escape(image)}"
+        dims = image_dimensions(image)
+        size = (
+            f'<meta property="og:image:width" content="{dims[0]}" />'
+            f'<meta property="og:image:height" content="{dims[1]}" />'
+            if dims
+            else ""
+        )
+        social = (
+            f'<meta property="og:image" content="{image_url}" />'
+            f"{size}"
+            f'<meta property="og:image:alt" content="{html.escape(title)}" />'
+            f'<meta name="twitter:card" content="summary_large_image" />'
+            f'<meta name="twitter:image" content="{image_url}" />'
+        )
+    canonical_tag = f'<link rel="canonical" href="{canonical}" />' if canonical else ""
+    # Without an icon link the browser looks for /favicon.ico; none existed, so
+    # every tab, bookmark and chat-app preview fell back to a generic page icon.
+    icons = (
+        f'<link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml" />'
+        f'<link rel="icon" href="{root}assets/favicon.ico" sizes="any" />'
+        f'<link rel="apple-touch-icon" href="{root}assets/apple-touch-icon.png" />'
+    )
     skip = ui["skip"]
     nav_posts = ui["nav_posts"]
     nav_tags = ui["nav_tags"]
@@ -740,11 +805,7 @@ def page(
 <meta property="og:type" content="{page_type}" />
 <meta property="og:title" content="{full_title}" />
 <meta property="og:description" content="{html.escape(description or str(config['description']))}" />
-{f'<meta property="og:image" content="{base}/{html.escape(image)}" /><meta name="twitter:card" content="summary_large_image" />' if image else ''}
-{f'<link rel="canonical" href="{canonical}" />' if canonical else ''}
-{alt}
-{xdefault}
-<link rel="alternate" type="application/rss+xml" title="{site_title}" href="{feed_href}" />
+{social}{canonical_tag}{alt}{xdefault}{icons}<link rel="alternate" type="application/rss+xml" title="{site_title}" href="{feed_href}" />
 <link rel="stylesheet" href="{root}assets/blog.css?v={asset_version('blog.css')}" />
 <script src="{root}assets/blog.js?v={asset_version('blog.js')}" defer></script>
 </head>
@@ -1149,6 +1210,11 @@ def build(blog_dir: Path, out_dir: Path, base_url: str | None = None, include_dr
     assets = blog_dir / "assets"
     if assets.is_dir():
         shutil.copytree(assets, out_dir / "assets")
+    # Crawlers and chat apps ask for /favicon.ico whether or not the HTML links
+    # an icon, so keep a copy at the site root as well as under /assets/.
+    root_icon = assets / "favicon.ico"
+    if root_icon.is_file():
+        shutil.copy(root_icon, out_dir / "favicon.ico")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
 
     def emit(lang: str, posts: list[Post], dest: Path) -> int:

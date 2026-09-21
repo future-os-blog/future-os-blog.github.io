@@ -4,7 +4,7 @@ date: 2026-08-22
 tags: [agent, loop, multi-agent, architecture]
 summary: 聊天会丢上下文。future-loop 把「帮我盯这个一周」变成一个可持久的目标——一张 todo 图、人工闸门、每步证据，以及一个可验证的「完成」定义，它能跨会话、跨重启、跨并行 worker 存活。这篇文章讲控制平面是怎么工作的，以及它是如何承载 Matilda 铺砖那次运行的。
 author: FutureOS
-image: assets/covers/loop-engineering.png
+image: assets/covers/loop-engineering.jpg
 ---
 
 AI agent 擅长一个有界的回合。它不擅长「帮我盯这个一周」——因为那个请求活在聊天历史里，而聊天历史恰恰是会被压缩、被重启、被丢掉的那个东西。

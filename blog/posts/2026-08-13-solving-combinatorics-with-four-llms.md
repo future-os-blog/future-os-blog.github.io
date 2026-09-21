@@ -4,7 +4,7 @@ date: 2026-08-13
 tags: [agent, loop, multi-agent, llm, experiments]
 summary: We gave a 16×16 tiling problem to four different models working in parallel under the future-loop control plane. Over 4.5 hours and 15 rounds the answer went from 30 to a verified 21 — and the two decisive breaks came from different models disagreeing with each other, not from any single model reasoning harder.
 author: FutureOS
-image: assets/covers/solving-combinatorics-with-four-llms.png
+image: assets/covers/solving-combinatorics-with-four-llms.jpg
 ---
 
 Take a 16×16 grid of unit squares. Place axis-aligned rectangles on it so that

@@ -56,6 +56,9 @@ def make_blog(posts, config=None, assets=True, zh_posts=None):
         (root / "assets").mkdir()
         (root / "assets" / "blog.css").write_text("body{}", encoding="utf-8")
         (root / "assets" / "blog.js").write_text("//toggle", encoding="utf-8")
+        (root / "assets" / "favicon.ico").write_bytes(b"\x00\x00\x01\x00")
+        (root / "assets" / "favicon.svg").write_text("<svg/>", encoding="utf-8")
+        (root / "assets" / "apple-touch-icon.png").write_bytes(b"png")
     for name, content in posts.items():
         (root / "posts" / name).write_text(content, encoding="utf-8")
     if zh_posts:
@@ -74,6 +77,28 @@ def run_build(blog_dir, **kwargs):
 
 def post(title, tags="[x]", extra="", body="Body text."):
     return f"---\ntitle: {title}\ntags: {tags}\n{extra}---\n\n{body}\n"
+
+
+def png_bytes(width, height):
+    """Enough of a PNG header for the size reader: signature + IHDR."""
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR"
+        + width.to_bytes(4, "big")
+        + height.to_bytes(4, "big")
+        + b"\x08\x06\x00\x00\x00"
+    )
+
+
+def jpeg_bytes(width, height):
+    """A JPEG header carrying an SOF0 frame with the given size."""
+    return (
+        b"\xff\xd8"          # SOI
+        b"\xff\xc0"          # SOF0
+        b"\x00\x11\x08"      # segment length + sample precision
+        + height.to_bytes(2, "big")
+        + width.to_bytes(2, "big")
+    )
 
 
 def render(text):
@@ -668,6 +693,60 @@ class StylesheetTests(unittest.TestCase):
     def test_toggle_icon_changes_with_the_theme(self):
         self.assertIn(".theme-toggle-icon::before", self.css)
         self.assertIn('[data-theme="light"] .theme-toggle-icon::before', self.css)
+
+
+class LinkPreviewTests(unittest.TestCase):
+    """What a chat app or social scraper sees when someone shares a post. A
+    thumbnail that is missing, too small, or declared without its size shows up
+    as a broken-link placeholder — which is exactly how this was reported."""
+
+    def setUp(self):
+        self.root = make_blog(
+            {"2026-01-01-a.md": post("Alpha", extra="image: assets/covers/a.png\n")},
+            zh_posts={"2026-01-01-a.md": post("阿尔法", extra="image: assets/covers/a.png\n")},
+        )
+        (self.root / "assets" / "covers").mkdir()
+        (self.root / "assets" / "covers" / "a.png").write_bytes(png_bytes(1200, 686))
+        self.out = run_build(self.root)
+        self.en = (self.out / "posts" / "a.html").read_text(encoding="utf-8")
+        self.zh = (self.out / "zh" / "posts" / "a.html").read_text(encoding="utf-8")
+
+    def test_og_image_is_absolute_and_declares_its_size(self):
+        self.assertIn('property="og:image" content="https://example.test/blog/assets/covers/a.png"', self.en)
+        self.assertIn('property="og:image:width" content="1200"', self.en)
+        self.assertIn('property="og:image:height" content="686"', self.en)
+
+    def test_twitter_card_has_an_image_too(self):
+        self.assertIn('name="twitter:card" content="summary_large_image"', self.en)
+        self.assertIn('name="twitter:image"', self.en)
+
+    def test_chinese_page_declares_the_same_absolute_image(self):
+        self.assertIn('property="og:image" content="https://example.test/blog/assets/covers/a.png"', self.zh)
+
+    def test_pages_without_a_cover_emit_no_og_image(self):
+        root = make_blog({"2026-01-01-plain.md": post("Plain")})
+        out = run_build(root)
+        html = (out / "posts" / "plain.html").read_text(encoding="utf-8")
+        self.assertNotIn("og:image", html)
+        self.assertNotIn("twitter:card", html)
+
+    def test_favicon_is_linked_at_every_depth(self):
+        # Depth matters: a Chinese post is two levels down.
+        self.assertIn('href="../assets/favicon.svg"', self.en)
+        self.assertIn('href="../../assets/favicon.svg"', self.zh)
+        self.assertIn('rel="apple-touch-icon"', self.zh)
+
+    def test_favicon_is_copied_to_the_site_root(self):
+        """Crawlers request /favicon.ico even when the HTML links one."""
+        self.assertTrue((self.out / "favicon.ico").is_file())
+
+    def test_image_dimensions_reads_png_and_jpeg(self):
+        (self.root / "assets" / "covers" / "b.jpg").write_bytes(jpeg_bytes(1200, 630))
+        self.assertEqual(blog.image_dimensions("assets/covers/a.png"), (1200, 686))
+        self.assertEqual(blog.image_dimensions("assets/covers/b.jpg"), (1200, 630))
+
+    def test_image_dimensions_is_none_for_a_missing_file(self):
+        self.assertIsNone(blog.image_dimensions("assets/covers/nope.png"))
 
 
 if __name__ == "__main__":

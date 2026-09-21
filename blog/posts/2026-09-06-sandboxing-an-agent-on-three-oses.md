@@ -2,7 +2,7 @@
 title: "Sandboxing an agent on macOS, Linux, and Windows"
 date: 2026-09-06
 author: FutureOS Engineering
-image: assets/covers/sandboxing-an-agent-on-three-oses.png
+image: assets/covers/sandboxing-an-agent-on-three-oses.jpg
 tags: [agent, desktop, internals]
 summary: "The product promise is one line: the agent should not touch what you did not allow. Delivering it takes three completely different OS mechanisms — Seatbelt, Bubblewrap, and a restricted token with NTFS ACLs — and an honest list of places where the promise cannot be fully kept."
 description: "How FutureOS sandboxes shell commands on three operating systems: one rule model, three backends, and the gaps we ship with our eyes open."

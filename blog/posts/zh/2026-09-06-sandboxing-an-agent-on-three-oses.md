@@ -2,7 +2,7 @@
 title: "在 macOS、Linux、Windows 上给 agent 做沙箱"
 date: 2026-09-06
 author: FutureOS Engineering
-image: assets/covers/sandboxing-an-agent-on-three-oses.png
+image: assets/covers/sandboxing-an-agent-on-three-oses.jpg
 tags: [agent, desktop, internals]
 summary: "对用户的承诺只有一句话：agent 不该碰你没允许的东西。兑现它却需要三套完全不同的操作系统机制——Seatbelt、Bubblewrap，以及受限令牌加 NTFS ACL——外加一份诚实的清单，列出哪些地方承诺无法完全兑现。"
 description: "FutureOS 如何在三个操作系统上给 shell 命令做沙箱：一套规则模型、三个后端，以及我们睁着眼睛发布出去的那些缺口。"

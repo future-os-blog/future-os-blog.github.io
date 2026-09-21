@@ -4,7 +4,7 @@ date: 2026-08-04
 tags: [agent, compaction, llm, experiments]
 summary: 我们把三种上下文压缩策略放进同一场 178 题的考试。FutureOS 保住了被压缩掉内容的 83%；OpenCode 保住 47%，Codex 38%。差距不在摘要写得更好——而在每个系统认为一次压缩应该留下什么。
 author: FutureOS
-image: assets/covers/context-compaction-measured.png
+image: assets/covers/context-compaction-measured.jpg
 ---
 
 一个长 agent 会话迟早会把上下文窗口填满，总得有东西被扔掉。每种压缩策略对同一个问题给出不同答案：你留下什么？
