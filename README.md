@@ -1,54 +1,86 @@
 # future-os-blog.github.io
 
-Pages site for the FutureOS engineering blog, served at **https://future-os-blog.github.io**.
+Source **and** the published site of the FutureOS engineering blog, served at
+**https://future-os-blog.github.io**.
 
-This repository is a *publisher*, not the source. The posts live in
-[`futuregene/future-os`](https://github.com/futuregene/future-os) under
-[`docs/blog/`](https://github.com/futuregene/future-os/tree/main/docs/blog), together
-with the generator (`scripts/blog/build.py`) and its tests. Nothing here is
-hand-edited except [`CNAME`](#custom-domain) — the build clones the sources and
-renders them:
+Markdown in, static site out: [`scripts/build.py`](scripts/build.py) renders
+[`blog/`](blog/) into plain HTML/CSS and
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml) deploys it to
+GitHub Pages. The generator is stdlib-only Python — no npm, no pip, no build
+dependencies to update.
 
-```
-git clone --depth 1 https://github.com/futuregene/future-os  →  python3 scripts/blog/build.py
-```
+## Layout
 
-A Pages artifact can only be deployed by the repository that owns it, which is why
-the build runs here instead of in `futuregene/future-os`. The sources are public, so
-the clone is anonymous: **no token, no secret**. The trade-off is that publishing is
-pull-based — it happens on the schedule in
-[`.github/workflows/publish.yml`](.github/workflows/publish.yml) (hourly, `:17`).
+| Path | What it is |
+|---|---|
+| `blog/blog.json` | Site config: title, tagline, `base_url`, repo link, feed size |
+| `blog/posts/YYYY-MM-DD-slug.md` | One file per post — the date and URL slug come from the filename |
+| `blog/assets/` | `blog.css`, `blog.js` and any images, copied verbatim into the build |
+| `scripts/build.py` | The generator (index, post pages, tag pages, RSS, sitemap) |
+| `scripts/test_build.py` | Its regression tests |
 
-## Publishing immediately
+Generated output goes to `build/` and is never committed.
 
-```bash
-gh workflow run publish.yml                       # build future-os@main
-gh workflow run publish.yml -f ref=<branch>       # preview a branch before merge
-gh run watch                                      # follow the deploy
-```
+## Writing a post
 
-`-f ref=<branch>` is the way to review a blog change from a pull request in
-`futuregene/future-os` before it lands: the same generator and the same tests run,
-against an unreleased branch.
+1. Create `blog/posts/YYYY-MM-DD-slug.md` — the date and the slug come from the
+   filename (a file without the date prefix must set `date:` in its front matter).
+2. Write front matter, then the body:
+
+   ```markdown
+   ---
+   title: Why the agent keeps a per-user lock
+   date: 2026-09-21
+   tags: [agent, concurrency]
+   summary: One process per user, and why the lock is not negotiable.
+   author: FutureOS        # optional, defaults to blog.json `author`
+   draft: true             # optional — excluded from the published site
+   ---
+
+   Body markdown follows.
+   ```
+
+   `title` and a date are required; `tags`, `summary` and `author` are optional
+   (`summary` falls back to the first 220 characters of the body). Unknown keys
+   are rejected rather than ignored, so a typo cannot silently drop a tag.
+
+3. Preview and publish:
+
+   ```bash
+   python3 scripts/build.py --include-drafts        # → build/, drafts included
+   python3 -m http.server 4321 --directory build   # http://127.0.0.1:4321
+   python3 scripts/test_build.py                    # generator regression tests
+   ```
+
+   Commit and push to `main` and the site redeploys (or run the workflow by hand
+   from the Actions tab).
+
+Markdown is a deliberate subset — headings, fenced code, blockquotes, nested
+lists, GFM pipe tables, rules, and inline code/emphasis/links/images. Raw HTML is
+escaped rather than executed. Images live in `blog/assets/` and are referenced as
+`../assets/screenshot.png` (which resolves identically from the source file and
+from the rendered page).
+
+**Links must survive publication.** Only `build/` is served, so a relative link
+to anything outside the blog would work in the source tree and 404 on the site.
+The build rejects one, and only one, relative form — `../assets/…`; link
+repository material by absolute URL and publish any image you need under
+`blog/assets/`.
 
 ## Custom domain
 
 Drop the hostname (no scheme, no path) in a `CNAME` file at the root of this
 repository — the workflow copies it into the published output:
 
-```
+```bash
 echo "blog.example.com" > CNAME
 ```
 
-Then add the DNS record at the registrar: `CNAME  blog.example.com → future-os-blog.github.io`
-(GitHub also accepts four `A` records for the apex: `185.199.108.153`,
-`185.199.109.153`, `185.199.110.153`, `185.199.111.153`). Finally set the domain under
-Settings → Pages and tick "Enforce HTTPS". Because every link in the build is relative,
-moving to a custom domain is a DNS/config change — nothing in the sources has to move.
-
-## Site configuration that is *not* here
-
-- Post front matter, the markdown subset, the draft flag and the local preview
-  commands: [`docs/blog/README.md`](https://github.com/futuregene/future-os/blob/main/docs/blog/README.md).
-- Title, tagline, feed size: [`docs/blog/blog.json`](https://github.com/futuregene/future-os/blob/main/docs/blog/blog.json).
-  This workflow overrides only `base_url` (feed, sitemap, canonical tags).
+Then add the DNS record at the registrar:
+`CNAME  blog.example.com → future-os-blog.github.io`
+(GitHub also accepts four `A` records for an apex domain: `185.199.108.153`,
+`185.199.109.153`, `185.199.110.153`, `185.199.111.153`). Finally set the domain
+under Settings → Pages and tick "Enforce HTTPS". Every link in the build is
+relative, so switching address is a DNS/config change — no source edit, apart
+from `base_url` in `blog/blog.json`, which drives the feed, the sitemap and
+canonical tags.

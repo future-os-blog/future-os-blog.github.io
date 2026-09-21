@@ -1,84 +1,48 @@
 name: Publish Blog
 
-# Serves https://future-os-blog.github.io from the sources in
-# https://github.com/futuregene/future-os (docs/blog/).
+# Build blog/ into a static site and deploy it to GitHub Pages
+# (https://future-os-blog.github.io).
 #
-# This repository owns the Pages site, so the build has to run *here* — Pages
-# artifacts can only be deployed by the repository that owns them. The sources
-# are public, so the build clones them anonymously: no token, no secret, nothing
-# to rotate. The trade-off is that publishing is pull-based, so a new post goes
-# live at the next scheduled run (or immediately via `gh workflow run`).
+# Pages' source must be set to "GitHub Actions" (Settings → Pages). With
+# "Deploy from a branch" GitHub would Jekyll-render the raw markdown sources
+# instead of serving this build.
 #
-# `workflow_dispatch` with a `ref` input builds any branch — that is the way to
-# preview blog changes before they land on main:
-#   gh workflow run publish.yml -f ref=docs/some-branch
+# This repository is both the source of the blog and the owner of the site, so
+# the build needs no token and no cross-repository clone: the workflow runs the
+# same generator and the same tests the sources ship with.
 
 on:
-  schedule:
-    # Not on the hour: GitHub's scheduler is busiest at :00 and drops jobs there.
-    - cron: "17 * * * *"
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: Branch, tag or SHA of futuregene/future-os to build
-        default: main
-        required: false
-  # Optional fast path: a push in future-os can trigger an immediate rebuild if
-  # it dispatches `future-os-push`. The default GITHUB_TOKEN cannot dispatch to
-  # another repository, so this needs a fine-grained PAT for futuregene/future-os
-  # with `contents: read` + `metadata: read`. Until then, the schedule covers it.
-  repository_dispatch:
-    types: [future-os-push]
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/publish.yml"
-      - "CNAME"
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Never cancel a run that is mid-publish, or Pages can be left serving a
-# half-uploaded artifact.
+# One deploy at a time; never cancel a run that is mid-publish, or Pages can be
+# left serving a half-uploaded artifact.
 concurrency:
   group: publish-blog
   cancel-in-progress: false
-
-env:
-  SOURCE_REPO: https://github.com/futuregene/future-os
-  # Canonical address of this site: feed, sitemap and canonical tags only. All
-  # links inside the build are relative, so the pages themselves are
-  # address-independent.
-  BASE_URL: https://future-os-blog.github.io
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve the source ref
-        id: source
-        run: |
-          set -euo pipefail
-          ref="${{ github.event.inputs.ref || github.event.client_payload.ref || 'main' }}"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - name: Checkout
+        uses: actions/checkout@v7
 
-      - name: Clone futuregene/future-os
-        run: |
-          set -euo pipefail
-          echo "==> Cloning $SOURCE_REPO@${{ steps.source.outputs.ref }}"
-          git clone --depth 1 --branch "${{ steps.source.outputs.ref }}" "$SOURCE_REPO" src
-
-      # The generator and its tests live in the source repository, so this runs
-      # exactly what a PR there ran. A broken renderer must not publish.
+      # The generator is stdlib-only Python, so the runner's stock python3 is
+      # the whole toolchain. Tests run first: a broken renderer must not publish.
       - name: Test the generator
-        run: PYTHONDONTWRITEBYTECODE=1 python3 src/scripts/test-blog-build.py
+        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_build.py
 
       - name: Build the site
         run: |
           set -euo pipefail
-          python3 src/scripts/blog/build.py --out site --base-url "$BASE_URL"
+          python3 scripts/build.py --out site
           # Optional custom domain: a CNAME file at the root of this repository
           # is copied into the published output.
           if [ -f CNAME ]; then

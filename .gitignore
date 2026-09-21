@@ -1,0 +1,6 @@
+# Generated site output (scripts/build.py) — never committed.
+build/
+
+# Python bytecode
+__pycache__/
+*.pyc
