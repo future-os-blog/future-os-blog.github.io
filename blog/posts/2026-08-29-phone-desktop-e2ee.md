@@ -50,8 +50,9 @@ five minutes and usable once. Don't share it or post a screenshot of it.
 
 ![Pairing a phone from the desktop](../assets/e2ee/desktop-pairing-qr.png)
 
-*Figure 1: pairing a phone from the desktop. The QR encodes the one-time,
-five-minute invitation; once the handshake completes the desktop deletes the
+*Figure 1: the panel the desktop puts up to pair a phone, countdown included. The
+QR encodes the one-time, five-minute invitation — this one is from the demo
+fixture, not a live code. Once the handshake completes the desktop deletes the
 PSK and the invitation is spent.*
 
 The phone generates its own X25519 identity and stores the bundle in Expo
