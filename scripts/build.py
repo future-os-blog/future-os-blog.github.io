@@ -307,13 +307,24 @@ class MarkdownRenderer:
     # -- inline ------------------------------------------------------------
     def inline(self, text: str) -> str:
         escaped = html.escape(text, quote=True)
-        rendered = INLINE_RE.sub(self._inline_sub, escaped)
+        # Soften the plain-text runs *between* inline constructs as well as the
+        # constructs themselves: a bare curl/wget/requests/... run is not in
+        # backticks but still wider than a phone column. Substitutions emit
+        # HTML, so only the untouched gaps may be scanned for break points.
+        parts: list[str] = []
+        cursor = 0
+        for match in INLINE_RE.finditer(escaped):
+            parts.append(soften_long_token(escaped[cursor : match.start()]))
+            parts.append(self._inline_sub(match))
+            cursor = match.end()
+        parts.append(soften_long_token(escaped[cursor:]))
+        rendered = "".join(parts)
         return re.sub(r" {2,}\n", "<br />\n", rendered)
 
     def _inline_sub(self, match: re.Match[str]) -> str:
         groups = match.groupdict()
         if groups["code_body"] is not None:
-            return f"<code>{groups['code_body']}</code>"
+            return f"<code>{soften_long_token(groups['code_body'])}</code>"
         if groups["img_url"] is not None:
             title = f' title="{groups["img_title"]}"' if groups["img_title"] else ""
             return (
@@ -325,7 +336,7 @@ class MarkdownRenderer:
             href = groups["link_href"]
             external = href.startswith(("http://", "https://"))
             rel = ' rel="noopener"' if external else ""
-            return f'<a href="{href}"{title}{rel}>{groups["link_text"]}</a>'
+            return f'<a href="{href}"{title}{rel}>{soften_long_token(groups["link_text"])}</a>'
         if groups["strong"] is not None:
             return f"<strong>{groups['strong']}</strong>"
         if groups["strong_"] is not None and self._underscore_ok(match):
@@ -550,7 +561,47 @@ def validate_post_links(post: Post, known_slugs: set[str]) -> None:
         )
 
 
-# ── HTML ────────────────────────────────────────────────────────────────────
+# A long, unbreakable token in body text — a path like
+# scripts/compaction_experiment/ or an identifier like
+# Noise_XXpsk0_25519_ChaChaPoly_BLAKE2b — is wider than a phone column. Left
+# whole it is pushed onto its own line, which leaves the line before it nearly
+# empty (the "broken up" look). overflow-wrap does not help: it only breaks a
+# token that would otherwise *overflow*, it never lets one fill the current
+# line. So give such tokens real break opportunities at their separators, which
+# both fills the line and breaks somewhere readable (after a /, _, - or :)
+# rather than mid-word. <wbr> adds no character, so copy-paste is unaffected.
+#
+# Only after /_+-: — never after . or , so numbers like 93.7 and prose
+# punctuation stay intact — and only inside a whitespace-free run long enough
+# to actually overflow a narrow column.
+BREAK_SOFTEN_MIN = 18
+BREAK_SOFTEN_AFTER = frozenset("/_+-:")
+
+
+def soften_long_token(text: str) -> str:
+    """Add <wbr> break points inside long tokens (operates on escaped text).
+
+    Applies per whitespace-separated run, so a long sentence is left alone and
+    only a long single token gains break opportunities.
+    """
+    if len(text) < BREAK_SOFTEN_MIN:
+        return text
+    return "".join(
+        part if part.isspace() else _soften_run(part) for part in re.split(r"(\s+)", text)
+    )
+
+
+def _soften_run(run: str) -> str:
+    if len(run) < BREAK_SOFTEN_MIN:
+        return run
+    out: list[str] = []
+    for char in run:
+        out.append(char)
+        if char in BREAK_SOFTEN_AFTER:
+            out.append("<wbr>")
+    return "".join(out)
+
+
 # ── Internationalization ────────────────────────────────────────────────────
 # English is the default site (served at /); Simplified Chinese is a mirror
 # under /zh/. Posts share a slug across languages. UI chrome is localized via

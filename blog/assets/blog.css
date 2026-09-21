@@ -223,6 +223,7 @@ a:focus-visible {
   font-size: 2.15rem;
   line-height: 1.15;
   letter-spacing: -0.022em;
+  text-wrap: balance;
 }
 
 .tagline {
@@ -294,6 +295,7 @@ a:focus-visible {
   font-size: 1.3rem;
   line-height: 1.28;
   letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .post-card h2 a {
@@ -348,6 +350,7 @@ a:focus-visible {
   font-size: 2rem;
   line-height: 1.22;
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 .post-header .post-meta {
@@ -362,7 +365,10 @@ a:focus-visible {
 
 .prose {
   padding: 1.75rem 0;
+  /* break-word lets a single long token wrap instead of overflowing; pretty
+     (where supported) avoids leaving one orphan word on the last line. */
   overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 .prose h2,
@@ -371,6 +377,7 @@ a:focus-visible {
   margin: 2.3rem 0 0.8rem;
   line-height: 1.28;
   letter-spacing: -0.014em;
+  text-wrap: balance;
 }
 
 .prose h2 {
@@ -441,7 +448,17 @@ a:focus-visible {
   font-size: 0.86em;
   background: var(--bg-code);
   border-radius: 6px;
-  padding: 0.15rem 0.4rem;
+  padding: 0.12rem 0.34rem;
+  /* Long identifiers and paths (Noise_XXpsk0_25519_ChaChaPoly_BLAKE2b,
+     scripts/compaction_experiment/…) are far wider than a phone column. With
+     the default wrapping the whole token is pushed to the next line and the
+     line before it ends up with a lone character — the ragged, fragmented
+     look. `anywhere` gives those breaks a cost the line-breaker actually
+     counts, so the token starts on the current line and splits only as much
+     as it must. Note: no `word-break: break-word` alongside it — that legacy
+     value maps to `overflow-wrap: break-word` and wins, restoring the
+     push-the-whole-token behaviour. */
+  overflow-wrap: anywhere;
 }
 
 .prose pre {
@@ -532,11 +549,43 @@ a:focus-visible {
   color: var(--fg-muted);
 }
 
+/* ── Chinese text ────────────────────────────────────────────────────────
+   CJK glyphs are denser than Latin at the same size, so they want slightly
+   different typography: a touch more leading than Latin (but not so much the
+   column reads as scattered), no negative tracking on headings, and no
+   hyphenation. Placed before the responsive blocks so small screens can
+   tighten the leading further. */
+:lang(zh-CN) body {
+  line-height: 1.74;
+}
+
+:lang(zh-CN) .hero h1,
+:lang(zh-CN) .post-header h1 {
+  letter-spacing: 0;
+  font-weight: 640;
+}
+
+:lang(zh-CN) .prose h2,
+:lang(zh-CN) .prose h3,
+:lang(zh-CN) .prose h4 {
+  letter-spacing: 0;
+}
+
+/* `text-wrap: pretty` is tuned for Latin orphan control and can leave CJK
+   paragraphs with odd spacing; keep CJK on the browser's native text layout. */
+:lang(zh-CN) .prose {
+  text-wrap: initial;
+}
+
 /* ── Small tablets / large phones ───────────────────────────────────────── */
 @media (max-width: 640px) {
   body {
     font-size: 16px;
     line-height: 1.72;
+  }
+
+  :lang(zh-CN) body {
+    line-height: 1.68;
   }
 
   .wrap {
@@ -663,6 +712,10 @@ a:focus-visible {
     padding: 0 0.85rem;
   }
 
+  :lang(zh-CN) body {
+    line-height: 1.64;
+  }
+
   .brand-text {
     font-size: 0.95rem;
   }
@@ -686,25 +739,6 @@ a:focus-visible {
   .tag {
     font-size: 0.72rem;
   }
-}
-
-/* ── Chinese text ────────────────────────────────────────────────────────
-   CJK glyphs are denser than Latin at the same font size, so they read better
-   with a little more leading and slightly less aggressive display weights. */
-:lang(zh-CN) body {
-  line-height: 1.8;
-}
-
-:lang(zh-CN) .hero h1,
-:lang(zh-CN) .post-header h1 {
-  letter-spacing: 0;
-  font-weight: 640;
-}
-
-:lang(zh-CN) .prose h2,
-:lang(zh-CN) .prose h3,
-:lang(zh-CN) .prose h4 {
-  letter-spacing: 0;
 }
 
 /* ── Touch devices ───────────────────────────────────────────────────────

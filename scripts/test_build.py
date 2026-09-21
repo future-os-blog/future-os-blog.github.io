@@ -232,6 +232,33 @@ class MarkdownTests(unittest.TestCase):
         self.assertIn("<del>gone</del>", html)
         self.assertIn("<em>under</em>", html)
 
+    def test_long_code_token_gains_break_opportunities(self):
+        """A wide path must be breakable at its separators, not pushed whole
+        onto the next line (which leaves the line before it nearly empty)."""
+        html = render("see `scripts/compaction_experiment/run.sh` now\n")
+        self.assertIn("scripts/<wbr>compaction_<wbr>experiment/<wbr>run.sh", html)
+
+    def test_long_plain_text_token_gains_break_opportunities(self):
+        """Not every wide token is in backticks."""
+        html = render("scanned for curl/wget/requests/urllib/socket keywords\n")
+        self.assertIn("curl/<wbr>wget/<wbr>requests/<wbr>urllib/<wbr>socket", html)
+
+    def test_short_tokens_and_numbers_are_left_alone(self):
+        # Short code spans stay intact, and a sentence full of separators is not
+        # shredded: numbers keep their decimal point and thousands comma.
+        html = render("`short-id` then 93.7% and 212,911 tokens, e.g. fine.\n")
+        self.assertIn("<code>short-id</code>", html)
+        self.assertIn("93.7%", html)
+        self.assertIn("212,911", html)
+        self.assertNotIn("93.<wbr>", html)
+        self.assertNotIn("212,<wbr>", html)
+
+    def test_break_points_never_split_an_html_entity(self):
+        html = render("a & b < c > d \"q\" 'r' in a fairly long line here\n")
+        self.assertIn("&amp;", html)
+        self.assertNotIn("&amp<wbr>", html)
+        self.assertNotIn("&lt<wbr>", html)
+
     def test_snake_case_is_not_emphasis(self):
         self.assertIn("snake_case_name", render("A snake_case_name stays literal.\n"))
 
