@@ -762,6 +762,16 @@ class LinkPreviewTests(unittest.TestCase):
     def test_image_dimensions_is_none_for_a_missing_file(self):
         self.assertIsNone(blog.image_dimensions("assets/covers/nope.png"))
 
+    def test_files_in_blog_root_land_at_the_site_root(self):
+        """Site-ownership checks are served from /name.txt, not /assets/name.txt."""
+        (self.root / "root").mkdir()
+        (self.root / "root" / "abc123.txt").write_text("token", encoding="utf-8")
+        out = run_build(self.root)
+        self.assertTrue((out / "abc123.txt").is_file())
+        self.assertEqual((out / "abc123.txt").read_text(encoding="utf-8"), "token")
+        # and nothing sneaks into a subdirectory
+        self.assertFalse((out / "assets" / "abc123.txt").exists())
+
 
 def jpeg_frame_marker(path):
     """The SOF marker of a JPEG: 0xC0 baseline, 0xC2 progressive.

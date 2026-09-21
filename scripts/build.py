@@ -1229,6 +1229,14 @@ def build(blog_dir: Path, out_dir: Path, base_url: str | None = None, include_dr
     assets = blog_dir / "assets"
     if assets.is_dir():
         shutil.copytree(assets, out_dir / "assets")
+    # Files that must sit at the site root rather than under /assets/ — site
+    # ownership checks (a verification TXT served from /), robots.txt and the
+    # like. Kept as an explicit directory instead of special-casing each name.
+    root_files = blog_dir / "root"
+    if root_files.is_dir():
+        for entry in sorted(root_files.iterdir()):
+            if entry.is_file():
+                shutil.copy(entry, out_dir / entry.name)
     # Crawlers and chat apps ask for /favicon.ico whether or not the HTML links
     # an icon, so keep a copy at the site root as well as under /assets/.
     root_icon = assets / "favicon.ico"
