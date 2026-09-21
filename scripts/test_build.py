@@ -392,9 +392,8 @@ class BuildTests(unittest.TestCase):
         html = (out / "posts" / "a.html").read_text(encoding="utf-8")
         # nav uses site_repo
         self.assertIn('<a class="nav-external" href="https://github.com/org/product">GitHub</a>', html)
-        # edit link still targets the blog repo, not site_repo
-        self.assertIn("https://github.com/example/repo/edit/main/2026-01-01-a.md", html)
-        self.assertNotIn("org/product/edit/main", html)
+        # No per-post "edit this post" link is rendered any more.
+        self.assertNotIn("/edit/", html)
         # footer source link still targets the blog repo
         self.assertIn("https://github.com/example/repo/tree/main/blog", html)
 

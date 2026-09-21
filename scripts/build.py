@@ -643,7 +643,6 @@ UI_STRINGS = {
         "all_tags": "← All tags",
         "post_count": "{n} post(s)",
         "tag_title": "Tag: {tag}",
-        "edit": "Edit this post",
         "no_posts": "No posts yet.",
         "no_tags": "No tags yet.",
     },
@@ -658,7 +657,6 @@ UI_STRINGS = {
         "all_tags": "← 全部标签",
         "post_count": "{n} 篇",
         "tag_title": "标签：{tag}",
-        "edit": "编辑本文",
         "no_posts": "还没有文章。",
         "no_tags": "还没有标签。",
     },
@@ -877,9 +875,6 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
         f'<a class="tag" href="{lang_root}tags/{slug}.html">{html.escape(tag)}</a>'
         for tag, slug in post.tag_slugs()
     )
-    edit = (
-        f"{config['repo_url']}/edit/{config['repo_branch']}/{post.source}"
-    )
     author = f'<span class="post-author">{html.escape(post.author)}</span>' if post.author else ""
     body = f"""<article class="post">
   <header class="post-header">
@@ -894,7 +889,6 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
 {body_html}
   </div>
   <footer class="post-footer">
-    <a href="{html.escape(edit)}">{ui['edit']}</a>
     <a href="{lang_root}index.html">{ui['all_posts']}</a>
   </footer>
 </article>"""
