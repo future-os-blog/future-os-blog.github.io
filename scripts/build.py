@@ -504,15 +504,20 @@ def load_posts(blog_dir: Path, include_drafts: bool = False) -> list[Post]:
 
 
 BODY_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)")
+# A post links to a sibling post as ./<slug>.html — both live under posts/, so
+# the relative path is correct from any post page.
+INTRA_POST_RE = re.compile(r"^\./([a-z0-9-]+)\.html$")
 
 
-def validate_post_links(post: Post) -> None:
+def validate_post_links(post: Post, known_slugs: set[str]) -> None:
     """Reject body links that resolve in the source tree but 404 once published.
 
     Only ``build/`` is served, so a relative link to a file outside the blog
-    (``../notes/x.md``) resolves in the tree and still breaks on the site. Site
-    assets are the exception — ``../assets/…`` resolves identically from
-    ``blog/posts/`` in both trees.
+    (``../notes/x.md``) resolves in the tree and still breaks on the site. Two
+    relative forms are allowed: site assets (``../assets/…``, which resolve
+    identically from ``blog/posts/`` in both trees) and links between published
+    posts (``./posts/<slug>.html`` or ``posts/<slug>.html``), checked against
+    the set of posts being built so a typo fails instead of 404ing.
     """
     for target in BODY_LINK_RE.findall(post.body):
         if target.startswith(("http://", "https://", "mailto:", "#", "//")):
@@ -523,10 +528,18 @@ def validate_post_links(post: Post) -> None:
         path = parsed.path
         if path.startswith("assets/") or path.startswith("../assets/"):
             continue
+        intra = INTRA_POST_RE.match(path)
+        if intra:
+            if intra.group(1) in known_slugs:
+                continue
+            raise PostError(
+                f"{post.source}: link to post {intra.group(1)!r} has no published target — "
+                "check the slug, or publish that post (drafts are not built)"
+            )
         raise PostError(
             f"{post.source}: link target {target!r} resolves in the repository but not on the "
-            "published site — use an absolute URL (e.g. the GitHub blob link), or keep the file "
-            "under blog/assets/ and link it as ../assets/<file>"
+            "published site — use an absolute URL (e.g. the GitHub blob link), keep the file "
+            "under blog/assets/ and link it as ../assets/<file>, or link a sibling post as ./<slug>.html"
         )
 
 
@@ -791,8 +804,9 @@ def load_config(blog_dir: Path, base_url: str | None = None) -> dict[str, object
 def build(blog_dir: Path, out_dir: Path, base_url: str | None = None, include_drafts: bool = False) -> int:
     config = load_config(blog_dir, base_url)
     posts = load_posts(blog_dir, include_drafts)
+    known_slugs = {post.slug for post in posts}
     for post in posts:
-        validate_post_links(post)
+        validate_post_links(post, known_slugs)
 
     if out_dir.exists():
         shutil.rmtree(out_dir)

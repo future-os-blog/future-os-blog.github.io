@@ -165,7 +165,7 @@ class PostParsingTests(unittest.TestCase):
         )
         parsed = blog.parse_post(root / "posts" / "2026-01-01-a.md", root)
         with self.assertRaises(blog.PostError):
-            blog.validate_post_links(parsed)
+            blog.validate_post_links(parsed, {"a"})
 
     def test_absolute_and_asset_links_are_allowed(self):
         root = make_blog(
@@ -180,7 +180,21 @@ class PostParsingTests(unittest.TestCase):
             }
         )
         parsed = blog.parse_post(root / "posts" / "2026-01-01-a.md", root)
-        blog.validate_post_links(parsed)
+        blog.validate_post_links(parsed, {"a"})
+
+    def test_intra_post_links_are_checked_against_published_slugs(self):
+        root = make_blog(
+            {
+                "2026-01-01-a.md": post("A", body="See [b](./b.html)."),
+                "2026-01-02-b.md": post("B"),
+            }
+        )
+        parsed = blog.parse_post(root / "posts" / "2026-01-01-a.md", root)
+        # b is published — a ./b.html sibling link resolves
+        blog.validate_post_links(parsed, {"a", "b"})
+        # a slug that is not being built must fail, not 404
+        with self.assertRaises(blog.PostError):
+            blog.validate_post_links(parsed, {"a"})
 
 
 class MarkdownTests(unittest.TestCase):
