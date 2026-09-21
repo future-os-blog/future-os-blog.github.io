@@ -1,6 +1,6 @@
 ---
 title: "Why we chose gRPC, and not ACP"
-date: 2026-09-25
+date: 2026-09-21
 tags: [protocol, grpc, acp, desktop, architecture]
 description: "FutureOS runs one agent behind a terminal UI, a desktop app, IM bots, and a CLI — all talking to it over a small two-method gRPC service. ACP is the editor↔agent protocol from Zed. Two things decided it for us: one agent has to serve many clients at once, and gRPC's streaming is mature where ACP has no pub/sub."
 image: assets/covers/why-grpc-not-acp.png
