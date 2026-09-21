@@ -1,8 +1,8 @@
 ---
 title: "Screenshotting a desktop app with no display"
-date: 2026-09-21
+date: 2026-09-14
 author: FutureOS Engineering
-image: covers/screenshotting-a-desktop-app-with-no-display.png
+image: assets/covers/screenshotting-a-desktop-app-with-no-display.png
 tags: [desktop, tooling, internals]
 summary: "Every product screenshot and demo video in FutureOS — including the figures in this blog — is rendered by driving the real React UI in headless Chrome against mock data. No display, no running app, no hand-drawn mockups. The same harness doubles as a UI regression tool."
 description: "How FutureOS produces screenshots and videos of its desktop and mobile apps from the real UI, on a machine with no display: a scenario file, a mock backend, headless Chrome, and the Chrome DevTools Protocol."

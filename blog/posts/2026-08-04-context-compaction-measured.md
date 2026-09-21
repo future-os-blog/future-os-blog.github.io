@@ -1,6 +1,6 @@
 ---
 title: "Context compaction, measured: FutureOS vs Codex vs OpenCode"
-date: 2026-08-28
+date: 2026-08-04
 tags: [agent, compaction, llm, experiments]
 summary: We ran three context-compaction strategies through the same 178-question exam. FutureOS kept 83% of the values that had been compacted away; OpenCode kept 47%, Codex 38%. The difference isn't a better summary — it's what each system decides a compaction should keep.
 author: FutureOS

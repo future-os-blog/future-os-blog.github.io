@@ -1,6 +1,6 @@
 ---
 title: "用四个 LLM 组队解一道组合题"
-date: 2026-09-08
+date: 2026-08-13
 tags: [agent, loop, multi-agent, llm, experiments]
 summary: 我们把一道 16×16 铺砖题交给四个不同的模型，在 future-loop 控制平面下并行求解。4.5 小时、15 轮，答案从 30 一路降到经验证的 21——而两次决定性的突破都来自不同模型之间的分歧，而不是哪个模型想得更狠。
 author: FutureOS

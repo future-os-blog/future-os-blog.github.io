@@ -1,6 +1,6 @@
 ---
 title: "手机与桌面之间的端到端加密"
-date: 2026-09-19
+date: 2026-08-29
 tags: [agent, mobile, desktop, security, e2ee]
 summary: FutureOS Mobile 通过一个 NATS 中继来控制你桌面上的会话。这个中继在公网上，所以必须按「它是恶意的」来设计——它可以丢弃、重排、重放、伪造消息，但绝不能读到一条命令、也不能伪造出一条被端点接受的命令。下面是 v2 通道如何用 Noise 握手和 ChaCha20-Poly1305 记录层做到这一点的。
 author: FutureOS

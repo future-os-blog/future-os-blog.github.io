@@ -1,6 +1,6 @@
 ---
 title: "Loop 工程：让长时间运行的 agent 工作变得可持久"
-date: 2026-09-14
+date: 2026-08-22
 tags: [agent, loop, multi-agent, architecture]
 summary: 聊天会丢上下文。future-loop 把「帮我盯这个一周」变成一个可持久的目标——一张 todo 图、人工闸门、每步证据，以及一个可验证的「完成」定义，它能跨会话、跨重启、跨并行 worker 存活。这篇文章讲控制平面是怎么工作的，以及它是如何承载 Matilda 铺砖那次运行的。
 author: FutureOS

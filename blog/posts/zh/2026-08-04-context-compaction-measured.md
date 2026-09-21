@@ -1,6 +1,6 @@
 ---
 title: "实测上下文压缩：FutureOS vs Codex vs OpenCode"
-date: 2026-08-28
+date: 2026-08-04
 tags: [agent, compaction, llm, experiments]
 summary: 我们把三种上下文压缩策略放进同一场 178 题的考试。FutureOS 保住了被压缩掉内容的 83%；OpenCode 保住 47%，Codex 38%。差距不在摘要写得更好——而在每个系统认为一次压缩应该留下什么。
 author: FutureOS
