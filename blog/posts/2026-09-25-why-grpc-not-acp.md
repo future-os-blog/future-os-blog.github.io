@@ -44,9 +44,6 @@ ACP is point-to-point. One editor, one agent subprocess. There's no notion in th
 
 FutureOS is the opposite topology. The agent is a long-lived, per-user daemon that owns all the state — sessions on disk, the JSONL journals, model config, the cost ledger. The desktop is one *client* of that daemon; the TUI, the Feishu/DingTalk bridge, and the CLI are its peers, all connected at once. A session you started in the terminal can be watched from the desktop and steered from a chat message.
 
-![Two topologies: one agent serving many clients (left) versus a single editor owning an agent subprocess (right)](../assets/grpc/topology.png)
-*Left, our shape — one agent, many concurrent clients. Right, ACP's shape — one editor owning one agent subprocess.*
-
 That needs fan-out: the agent emits a `text_chunk` once and every attached client sees it. A gRPC service gives us this for free — any number of clients open `StreamEvents` and the server multiplexes the same event stream to all of them. ACP has nothing here; you'd have to build a brokered pub/sub layer on top of it yourself, at which point you've reinvented the part gRPC already solved and bolted it onto a protocol that assumed a single consumer.
 
 ## Reason two: gRPC's streaming is mature, ACP's isn't
