@@ -714,24 +714,26 @@ def render_index(
     tags: list[tuple[str, str, int]],
     lang: str = "en",
 ) -> str:
-    cards = "\n".join(post_card(post, "") for post in posts) or (
-        '<p class="muted">No posts yet.</p>'
+    cfg = lang_config(config, lang)
+    ui = UI_STRINGS[lang]
+    base = str(config["base_url"]).rstrip("/")
+    prefix = "" if lang == "en" else "zh/"
+    # The English index sits at the site root (depth 0); the Chinese index sits
+    # one level down under /zh/ (depth 1), so its relative links need "../".
+    index_root = "" if lang == "en" else "../"
+    cards = "\n".join(post_card(post, index_root) for post in posts) or (
+        f'<p class="muted">{ui["no_posts"]}</p>'
     )
     tag_cloud = ""
     if tags:
         tag_cloud = (
             '<p class="tag-cloud">'
             + "".join(
-                f'<a class="tag" href="tags/{slug}.html">{html.escape(tag)} <span class="count">{count}</span></a>'
+                f'<a class="tag" href="{index_root}tags/{slug}.html">{html.escape(tag)} <span class="count">{count}</span></a>'
                 for tag, slug, count in tags
             )
             + "</p>"
         )
-    cfg = lang_config(config, lang)
-    ui = UI_STRINGS[lang]
-    base = str(config["base_url"]).rstrip("/")
-    prefix = "" if lang == "en" else "zh/"
-    home = f"{prefix}index.html"
     body = f"""<section class="hero">
   <h1>{html.escape(str(cfg['title']))}</h1>
   <p class="tagline">{html.escape(str(cfg['tagline']))}</p>
@@ -760,6 +762,14 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
     depth = 1 if lang == "en" else 2
     root = "../" * depth
     prefix = "" if lang == "en" else "zh/"
+    # Body asset links are written as ../assets/… (correct from a depth-1
+    # English post). A Chinese post sits one level deeper (/zh/posts/), so
+    # those links need one more ../. Sibling-post links (./<slug>.html) stay
+    # valid because both languages keep posts under their own posts/ dir.
+    if lang != "en":
+        body_html = body_html.replace('src="../assets/', 'src="../../assets/').replace(
+            'href="../assets/', 'href="../../assets/'
+        )
     tags = "".join(
         f'<a class="tag" href="{root}tags/{slug}.html">{html.escape(tag)}</a>'
         for tag, slug in post.tag_slugs()

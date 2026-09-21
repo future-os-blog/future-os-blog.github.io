@@ -425,6 +425,49 @@ class ChineseMirrorTests(unittest.TestCase):
         self.assertIn("https://example.test/blog/zh/posts/alpha.html", sitemap)
         self.assertIn("https://example.test/blog/zh/", sitemap)
 
+    def test_zh_index_cover_and_links_get_an_extra_dotdot(self):
+        config = dict(CONFIG)
+        config["i18n"] = {"zh": {"title": "测试博客"}}
+        cover = post("Cover", extra="image: assets/covers/a.png\n")
+        out = run_build(
+            make_blog(
+                {"2026-01-01-alpha.md": cover},
+                config=config,
+                zh_posts={"2026-01-01-alpha.md": cover},
+            )
+        )
+        # English index at depth 0, Chinese at /zh/ (depth 1).
+        en_index = (out / "index.html").read_text(encoding="utf-8")
+        zh_index = (out / "zh" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('src="assets/covers/a.png"', en_index)
+        self.assertIn('src="../assets/covers/a.png"', zh_index)
+        # Cards and the tag cloud must link back up out of /zh/.
+        self.assertIn('href="../posts/alpha.html"', zh_index)
+        self.assertIn('href="../tags/x.html"', zh_index)
+
+    def test_zh_post_body_figures_get_an_extra_dotdot(self):
+        alpha = post("阿尔法", body="![图](../assets/x/fig.png)\n\n[另一篇](./beta.html)")
+        out = run_build(
+            make_blog(
+                {
+                    "2026-01-01-alpha.md": alpha,
+                    "2026-01-02-beta.md": post("贝塔", body="正文。"),
+                },
+                zh_posts={
+                    "2026-01-01-alpha.md": alpha,
+                    "2026-01-02-beta.md": post("贝塔", body="正文。"),
+                },
+            )
+        )
+        en_post = (out / "posts" / "alpha.html").read_text(encoding="utf-8")
+        zh_post = (out / "zh" / "posts" / "alpha.html").read_text(encoding="utf-8")
+        # English post at depth 1 keeps ../assets; Chinese at /zh/posts/ needs ../../.
+        self.assertIn('src="../assets/x/fig.png"', en_post)
+        self.assertIn('src="../../assets/x/fig.png"', zh_post)
+        # Sibling-post links stay ./<slug>.html in both languages.
+        self.assertIn('href="./beta.html"', en_post)
+        self.assertIn('href="./beta.html"', zh_post)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
