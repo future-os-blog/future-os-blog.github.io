@@ -396,6 +396,18 @@ a:focus-visible {
   opacity: 0.55;
 }
 
+/* The cover leads the article. Shown whole rather than cropped to the cards'
+   21:9, and given the header's border room to breathe. */
+.post-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 1.75rem 0 2rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-raise);
+}
+
 .prose {
   padding: 1.75rem 0;
   /* break-word lets a single long token wrap instead of overflowing; pretty
@@ -758,6 +770,13 @@ a:focus-visible {
      whole first screen, so crop it shorter. */
   .post-card-cover img {
     aspect-ratio: 16 / 9;
+  }
+
+  /* The article cover is the first thing under the title on a phone, so pull
+     it tight against the header rather than leaving a desktop-sized gap. */
+  .post-cover {
+    margin: 1.25rem 0 1.5rem;
+    border-radius: 10px;
   }
 
   .post-card h2 {

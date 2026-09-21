@@ -820,5 +820,43 @@ class CoverAssetTests(unittest.TestCase):
                 self.assertGreaterEqual(dims[0], 1000)
 
 
+class PostCoverTests(unittest.TestCase):
+    """The cover also leads the article itself, not just the index card."""
+
+    def setUp(self):
+        self.root = make_blog(
+            {"2026-01-01-a.md": post("Alpha", extra="image: assets/covers/a.png\n")},
+            zh_posts={"2026-01-01-a.md": post("阿尔法", extra="image: assets/covers/a.png\n")},
+        )
+        (self.root / "assets" / "covers").mkdir()
+        (self.root / "assets" / "covers" / "a.png").write_bytes(png_bytes(1200, 686))
+        self.out = run_build(self.root)
+
+    def test_english_post_shows_the_cover(self):
+        html = (self.out / "posts" / "a.html").read_text(encoding="utf-8")
+        self.assertIn('class="post-cover"', html)
+        self.assertIn('src="../assets/covers/a.png"', html)
+
+    def test_chinese_post_shows_the_cover_one_level_deeper(self):
+        html = (self.out / "zh" / "posts" / "a.html").read_text(encoding="utf-8")
+        self.assertIn('class="post-cover"', html)
+        self.assertIn('src="../../assets/covers/a.png"', html)
+
+    def test_cover_carries_its_size_to_avoid_layout_shift(self):
+        html = (self.out / "posts" / "a.html").read_text(encoding="utf-8")
+        self.assertIn('width="1200" height="686"', html)
+
+    def test_post_without_a_cover_renders_none(self):
+        root = make_blog({"2026-01-01-plain.md": post("Plain")})
+        out = run_build(root)
+        html = (out / "posts" / "plain.html").read_text(encoding="utf-8")
+        self.assertNotIn("post-cover", html)
+
+    def test_cover_sits_between_the_header_and_the_body(self):
+        html = (self.out / "posts" / "a.html").read_text(encoding="utf-8")
+        self.assertLess(html.index('class="post-header"'), html.index('class="post-cover"'))
+        self.assertLess(html.index('class="post-cover"'), html.index('class="prose"'))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

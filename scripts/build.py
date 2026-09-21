@@ -1005,7 +1005,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
     ui = UI_STRINGS[lang]
     base = str(config["base_url"]).rstrip("/")
     depth = 1 if lang == "en" else 2
-    _asset_root, lang_root = roots(depth, lang)
+    asset_root, lang_root = roots(depth, lang)
     prefix = "" if lang == "en" else "zh/"
     # Body asset links are written as ../assets/… (correct from a depth-1
     # English post). A Chinese post sits one level deeper (/zh/posts/), so
@@ -1021,6 +1021,17 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
     )
     author = f'<span class="post-author">{html.escape(post.author)}</span>' if post.author else ""
     comments = render_comments(config, post, lang)
+    # The cover leads the article, so it loads eagerly (unlike the lazy index
+    # cards) and carries its intrinsic size to keep the text from shifting once
+    # it arrives.
+    cover = ""
+    if post.image:
+        dims = image_dimensions(post.image)
+        size_attrs = f' width="{dims[0]}" height="{dims[1]}"' if dims else ""
+        cover = (
+            f'\n  <img class="post-cover" src="{asset_root}{html.escape(post.image)}"'
+            f'{size_attrs} alt="" decoding="async" />'
+        )
     body = f"""<article class="post">
   <header class="post-header">
     <h1>{html.escape(post.title)}</h1>
@@ -1029,7 +1040,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str, lang: str
       {author}
     </p>
     {f'<p class="post-tags">{tags}</p>' if tags else ''}
-  </header>
+  </header>{cover}
   <div class="prose">
 {body_html}
   </div>
