@@ -373,6 +373,7 @@ class Post:
     summary: str = ""
     author: str = ""
     draft: bool = False
+    image: str = ""  # optional cover, e.g. assets/covers/foo.png (served at {base_url}/assets/…)
     body: str = ""
     source: str = ""  # repo-relative POSIX path, for the "edit this post" link
     source_name: str = ""  # filename, used as the same-date tiebreaker
@@ -477,6 +478,7 @@ def parse_post(path: Path, blog_dir: Path) -> Post:
         summary=summary,
         author=str(meta.get("author", "")).strip(),
         draft=draft,
+        image=str(meta.get("image", "")).strip(),
         body=body,
         source=source,
         source_name=path.name,
@@ -553,6 +555,7 @@ def page(
     description: str = "",
     canonical: str | None = None,
     page_type: str = "website",
+    image: str = "",
 ) -> str:
     root = "../" * depth
     site_title = html.escape(str(config["title"]))
@@ -572,6 +575,7 @@ def page(
 <meta property="og:type" content="{page_type}" />
 <meta property="og:title" content="{full_title}" />
 <meta property="og:description" content="{html.escape(description or str(config['description']))}" />
+{f'<meta property="og:image" content="{config["base_url"]}/{html.escape(image)}" /><meta name="twitter:card" content="summary_large_image" />' if image else ''}
 {f'<link rel="canonical" href="{canonical}" />' if canonical else ''}
 <link rel="alternate" type="application/rss+xml" title="{site_title}" href="{root}feed.xml" />
 <link rel="stylesheet" href="{root}assets/blog.css" />
@@ -614,6 +618,7 @@ def post_card(post: Post, root: str) -> str:
         for tag, slug in post.tag_slugs()
     )
     return f"""<article class="post-card">
+  {f'<a class="post-card-cover" href="{root}{post.url}"><img src="{root}{html.escape(post.image)}" alt="" loading="lazy"></a>' if post.image else ''}
   <p class="post-meta"><time datetime="{post.date.isoformat()}">{post.date.isoformat()}</time></p>
   <h2><a href="{root}{post.url}">{html.escape(post.title)}</a></h2>
   <p class="post-summary">{html.escape(post.summary)}</p>
@@ -686,6 +691,7 @@ def render_post(config: dict[str, object], post: Post, body_html: str) -> str:
         description=post.summary,
         canonical=f"{config['base_url']}/{post.url}",
         page_type="article",
+        image=post.image,
     )
 
 

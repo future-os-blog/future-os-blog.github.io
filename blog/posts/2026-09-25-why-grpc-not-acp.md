@@ -3,6 +3,7 @@ title: "Why we chose gRPC, and not ACP"
 date: 2026-09-25
 tags: [protocol, grpc, acp, desktop, architecture]
 description: "FutureOS runs one agent behind a terminal UI, a desktop app, IM bots, and a CLI — all talking to it over a small two-method gRPC service. ACP is the editor↔agent protocol from Zed. Two things decided it for us: one agent has to serve many clients at once, and gRPC's streaming is mature where ACP has no pub/sub."
+image: assets/covers/why-grpc-not-acp.png
 ---
 
 The question came up while we were wiring the desktop to the agent: why are we hand-rolling a gRPC protocol when the Agent Client Protocol (ACP) already exists for exactly the "UI talks to an agent" problem? It was a fair challenge, and the answer isn't that ACP is bad — it's that two requirements of ours land squarely outside what ACP does. One agent has to serve several clients at the same time, and the streaming we need is something gRPC does natively and ACP doesn't really have at all.
@@ -42,6 +43,9 @@ This is the decisive difference, and it's structural.
 ACP is point-to-point. One editor, one agent subprocess. There's no notion in the protocol of several clients attached to the same agent, and no pub/sub — the editor is the single consumer of the agent's updates.
 
 FutureOS is the opposite topology. The agent is a long-lived, per-user daemon that owns all the state — sessions on disk, the JSONL journals, model config, the cost ledger. The desktop is one *client* of that daemon; the TUI, the Feishu/DingTalk bridge, and the CLI are its peers, all connected at once. A session you started in the terminal can be watched from the desktop and steered from a chat message.
+
+![Two topologies: one agent serving many clients (left) versus a single editor owning an agent subprocess (right)](../assets/grpc/topology.png)
+*Left, our shape — one agent, many concurrent clients. Right, ACP's shape — one editor owning one agent subprocess.*
 
 That needs fan-out: the agent emits a `text_chunk` once and every attached client sees it. A gRPC service gives us this for free — any number of clients open `StreamEvents` and the server multiplexes the same event stream to all of them. ACP has nothing here; you'd have to build a brokered pub/sub layer on top of it yourself, at which point you've reinvented the part gRPC already solved and bolted it onto a protocol that assumed a single consumer.
 
