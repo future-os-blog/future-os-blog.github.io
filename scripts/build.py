@@ -673,6 +673,8 @@ UI_STRINGS = {
 # never hashes another blog's files (the tests build throwaway trees).
 _ASSET_DIR: Path | None = None
 
+IMAGE_MIME = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}
+
 
 def asset_version(name: str) -> str:
     """Short content hash for a site asset, used as a cache-busting query.
@@ -769,12 +771,18 @@ def page(
             if dims
             else ""
         )
+        ext = image.rsplit(".", 1)[-1].lower()
         social = (
             f'<meta property="og:image" content="{image_url}" />'
+            f'<meta property="og:image:type" content="{IMAGE_MIME.get(ext, "image/png")}" />'
             f"{size}"
             f'<meta property="og:image:alt" content="{html.escape(title)}" />'
             f'<meta name="twitter:card" content="summary_large_image" />'
             f'<meta name="twitter:image" content="{image_url}" />'
+            # Two legacy hints: QQ/WeChat honoured rel=image_src long before
+            # OpenGraph, and some scrapers read Schema.org microdata instead.
+            f'<link rel="image_src" href="{image_url}" />'
+            f'<meta itemprop="image" content="{image_url}" />'
         )
     canonical_tag = f'<link rel="canonical" href="{canonical}" />' if canonical else ""
     # Without an icon link the browser looks for /favicon.ico; none existed, so

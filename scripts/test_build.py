@@ -720,6 +720,15 @@ class LinkPreviewTests(unittest.TestCase):
         self.assertIn('name="twitter:card" content="summary_large_image"', self.en)
         self.assertIn('name="twitter:image"', self.en)
 
+    def test_legacy_and_microdata_image_hints_are_present(self):
+        """WeChat/QQ honoured rel=image_src before OpenGraph, and some scrapers
+        read Schema.org microdata — cheap to declare both."""
+        self.assertIn('<link rel="image_src"', self.en)
+        self.assertIn('itemprop="image"', self.en)
+
+    def test_og_image_type_is_declared(self):
+        self.assertIn('property="og:image:type" content="image/png"', self.en)
+
     def test_chinese_page_declares_the_same_absolute_image(self):
         self.assertIn('property="og:image" content="https://example.test/blog/assets/covers/a.png"', self.zh)
 
@@ -747,6 +756,68 @@ class LinkPreviewTests(unittest.TestCase):
 
     def test_image_dimensions_is_none_for_a_missing_file(self):
         self.assertIsNone(blog.image_dimensions("assets/covers/nope.png"))
+
+
+def jpeg_frame_marker(path):
+    """The SOF marker of a JPEG: 0xC0 baseline, 0xC2 progressive.
+
+    Walks the marker segments properly rather than searching for the byte pair,
+    which occurs by chance inside compressed data.
+    """
+    data = path.read_bytes()
+    i = 2
+    while i < len(data) - 3:
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        marker = data[i + 1]
+        if marker == 0xD8 or marker == 0x01 or 0xD0 <= marker <= 0xD7:
+            i += 2
+            continue
+        length = int.from_bytes(data[i + 2:i + 4], "big")
+        if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+            return marker
+        i += 2 + length
+    return None
+
+
+class CoverAssetTests(unittest.TestCase):
+    """The shipped covers, checked for what a link-preview crawler needs."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.assets = Path(__file__).resolve().parent.parent / "blog" / "assets"
+        cls.covers = sorted((cls.assets / "covers").glob("*.jpg"))
+        # image_dimensions() resolves against the blog being built; point it here.
+        blog._ASSET_DIR = cls.assets
+
+    @classmethod
+    def tearDownClass(cls):
+        blog._ASSET_DIR = None
+
+    def test_covers_exist(self):
+        self.assertTrue(self.covers)
+
+    def test_covers_are_baseline_jpeg(self):
+        """Progressive JPEG is a needless compatibility risk for the crawlers
+        that build chat-app link previews."""
+        for cover in self.covers:
+            with self.subTest(cover=cover.name):
+                self.assertEqual(jpeg_frame_marker(cover), 0xC0, "expected baseline SOF0")
+
+    def test_covers_stay_under_a_byte_budget(self):
+        """A thumbnail fetch has to beat a timeout; a multi-megabyte cover just
+        fails and the preview falls back to an icon."""
+        for cover in self.covers:
+            with self.subTest(cover=cover.name):
+                self.assertLess(cover.stat().st_size, 200_000, "cover too large")
+
+    def test_covers_are_at_least_1000px_wide(self):
+        for cover in self.covers:
+            with self.subTest(cover=cover.name):
+                dims = blog.image_dimensions(f"assets/covers/{cover.name}")
+                self.assertIsNotNone(dims)
+                self.assertGreaterEqual(dims[0], 1000)
 
 
 if __name__ == "__main__":
