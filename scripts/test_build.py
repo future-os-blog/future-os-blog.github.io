@@ -46,7 +46,7 @@ CONFIG = {
 }
 
 
-def make_blog(posts, config=None, assets=True):
+def make_blog(posts, config=None, assets=True, zh_posts=None):
     """Write a throwaway blog tree: `posts` maps filename → file contents."""
     root = Path(tempfile.mkdtemp(prefix="blog-build-"))
     (root / "posts").mkdir(parents=True)
@@ -57,6 +57,10 @@ def make_blog(posts, config=None, assets=True):
         (root / "assets" / "blog.css").write_text("body{}", encoding="utf-8")
     for name, content in posts.items():
         (root / "posts" / name).write_text(content, encoding="utf-8")
+    if zh_posts:
+        (root / "posts" / "zh").mkdir()
+        for name, content in zh_posts.items():
+            (root / "posts" / "zh" / name).write_text(content, encoding="utf-8")
     return root
 
 
@@ -351,6 +355,75 @@ class BuildTests(unittest.TestCase):
         self.assertIn(
             '<a class="nav-external" href="https://github.com/example/repo">GitHub</a>', html
         )
+
+
+class ChineseMirrorTests(unittest.TestCase):
+    """The /zh/ mirror: same slugs, localized chrome, hreflang, language switch."""
+
+    def build(self, zh_posts=None, config=None):
+        return run_build(
+            make_blog(
+                {
+                    "2026-01-02-beta.md": post("Beta", body="Beta body."),
+                    "2026-01-01-alpha.md": post("Alpha", body="Alpha body."),
+                },
+                config=config,
+                zh_posts=zh_posts,
+            )
+        )
+
+    def test_no_translation_means_no_zh_tree(self):
+        out = self.build()
+        self.assertFalse((out / "zh").exists())
+
+    def test_zh_pages_are_written_with_localized_chrome(self):
+        config = dict(CONFIG)
+        config["i18n"] = {"zh": {"title": "测试博客", "tagline": "中文标语"}}
+        out = self.build(
+            zh_posts={"2026-01-02-beta.md": post("贝塔", body="正文。")},
+            config=config,
+        )
+        index = (out / "zh" / "index.html").read_text(encoding="utf-8")
+        post_html = (out / "zh" / "posts" / "beta.html").read_text(encoding="utf-8")
+        self.assertIn('lang="zh-CN"', index)
+        self.assertIn("测试博客", index)
+        self.assertIn("文章", index)  # localized nav label
+        # English original is untouched.
+        en_index = (out / "index.html").read_text(encoding="utf-8")
+        self.assertIn('lang="en"', en_index)
+        self.assertNotIn("测试博客", en_index)
+        self.assertIn("贝塔", post_html)
+
+    def test_hreflang_and_language_switch_cross_link(self):
+        out = self.build(zh_posts={"2026-01-01-alpha.md": post("阿尔法", body="正文。")})
+        en_post = (out / "posts" / "alpha.html").read_text(encoding="utf-8")
+        zh_post = (out / "zh" / "posts" / "alpha.html").read_text(encoding="utf-8")
+        # English points at the Chinese mirror; Chinese points back at English.
+        self.assertIn('hreflang="zh-CN" href="https://example.test/blog/zh/posts/alpha.html"', en_post)
+        self.assertIn('hreflang="en" href="https://example.test/blog/posts/alpha.html"', zh_post)
+        self.assertIn('hreflang="x-default" href="https://example.test/blog/posts/alpha.html"', zh_post)
+        # Visible switcher: en shows 中文, zh shows English.
+        self.assertIn('class="lang-switch"', en_post)
+        self.assertIn(">中文</a>", en_post)
+        self.assertIn(">English</a>", zh_post)
+
+    def test_zh_feed_is_localized_and_under_zh(self):
+        out = self.build(zh_posts={"2026-01-01-alpha.md": post("阿尔法", body="正文。")})
+        feed = (out / "zh" / "feed.xml").read_text(encoding="utf-8")
+        self.assertIn("<language>zh-CN</language>", feed)
+        self.assertIn("/zh/posts/alpha.html", feed)
+        self.assertIn("阿尔法", feed)
+
+    def test_orphan_chinese_slug_fails(self):
+        with self.assertRaises(blog.PostError):
+            self.build(zh_posts={"2026-01-03-ghost.md": post("幽灵", body="无英文原文。")})
+
+    def test_sitemap_lists_both_languages(self):
+        out = self.build(zh_posts={"2026-01-01-alpha.md": post("阿尔法", body="正文。")})
+        sitemap = (out / "sitemap.xml").read_text(encoding="utf-8")
+        self.assertIn("https://example.test/blog/posts/alpha.html", sitemap)
+        self.assertIn("https://example.test/blog/zh/posts/alpha.html", sitemap)
+        self.assertIn("https://example.test/blog/zh/", sitemap)
 
 
 if __name__ == "__main__":

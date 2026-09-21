@@ -7,5 +7,12 @@
   "repo_url": "https://github.com/future-os-blog/future-os-blog.github.io",
   "site_repo": "https://github.com/futuregene/future-os",
   "repo_branch": "main",
-  "feed_size": 20
+  "feed_size": 20,
+  "i18n": {
+    "zh": {
+      "title": "FutureOS 工程笔记",
+      "tagline": "构建「一个无处不在的 agent」的随笔",
+      "description": "FutureOS 团队的工程笔记：agent 内部机制、RPC 线路协议、loop 编排，以及建立在其上的桌面 / 移动端 / 终端界面。"
+    }
+  }
 }

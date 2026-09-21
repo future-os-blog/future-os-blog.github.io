@@ -43,6 +43,7 @@ DEFAULT_CONFIG = {
     "site_repo": "",
     "repo_branch": "main",
     "feed_size": 20,
+    "i18n": {},
 }
 
 # ── Markdown ────────────────────────────────────────────────────────────────
@@ -485,10 +486,14 @@ def parse_post(path: Path, blog_dir: Path) -> Post:
     )
 
 
-def load_posts(blog_dir: Path, include_drafts: bool = False) -> list[Post]:
-    posts_dir = blog_dir / "posts"
+def load_posts(blog_dir: Path, include_drafts: bool = False, lang: str = "en") -> list[Post]:
+    # English posts live in posts/; a translation lives in posts/<lang>/ and
+    # shares its slug with the English original.
+    posts_dir = blog_dir / "posts" if lang == "en" else blog_dir / "posts" / lang
     if not posts_dir.is_dir():
-        raise PostError(f"{posts_dir} does not exist")
+        if lang == "en":
+            raise PostError(f"{posts_dir} does not exist")
+        return []  # a language with no translations yet is simply empty
     posts = [parse_post(path, blog_dir) for path in sorted(posts_dir.glob("*.md"))]
     drafts = [post for post in posts if post.draft]
     if drafts and not include_drafts:
@@ -546,6 +551,42 @@ def validate_post_links(post: Post, known_slugs: set[str]) -> None:
 
 
 # ── HTML ────────────────────────────────────────────────────────────────────
+# ── Internationalization ────────────────────────────────────────────────────
+# English is the default site (served at /); Simplified Chinese is a mirror
+# under /zh/. Posts share a slug across languages. UI chrome is localized via
+# UI_STRINGS; body content comes from each language's own source files.
+SUPPORTED_LANGS = ("en", "zh")
+HTML_LANG = {"en": "en", "zh": "zh-CN"}
+ALT_LANG = {"en": "zh-CN", "zh": "en"}
+LANG_LABEL = {"en": "中文", "zh": "English"}  # the *other* language's label
+UI_STRINGS = {
+    "en": {
+        "skip": "Skip to content",
+        "nav_posts": "Posts",
+        "nav_tags": "Tags",
+        "theme_label": "Toggle color theme",
+        "source_label": "Source:",
+        "tags_heading": "Tags",
+        "all_posts": "← All posts",
+        "edit": "Edit this post",
+        "no_posts": "No posts yet.",
+        "no_tags": "No tags yet.",
+    },
+    "zh": {
+        "skip": "跳到正文",
+        "nav_posts": "文章",
+        "nav_tags": "标签",
+        "theme_label": "切换深浅色主题",
+        "source_label": "源码：",
+        "tags_heading": "标签",
+        "all_posts": "← 全部文章",
+        "edit": "编辑本文",
+        "no_posts": "还没有文章。",
+        "no_tags": "还没有标签。",
+    },
+}
+
+
 def page(
     *,
     config: dict[str, object],
@@ -556,17 +597,33 @@ def page(
     canonical: str | None = None,
     page_type: str = "website",
     image: str = "",
+    lang: str = "en",
+    alt_link: str | None = None,
+    alt_href: str = "",
 ) -> str:
     root = "../" * depth
     site_title = html.escape(str(config["title"]))
-    # The top "GitHub" link points at the *product* repo (site_repo) when set,
-    # otherwise at the blog repo. The footer "Source: blog/" and each post's
-    # "Edit this post" always use repo_url — they must target the repo that
-    # actually holds the sources.
     site_repo = html.escape(str(config.get("site_repo") or config["repo_url"]))
     full_title = site_title if title == site_title else f"{html.escape(title)} · {site_title}"
+    ui = UI_STRINGS[lang]
+    base = str(config["base_url"])
+    alt = f'<link rel="alternate" hreflang="{ALT_LANG[lang]}" href="{alt_link}" />' if alt_link else ""
+    xdefault = (
+        f'<link rel="alternate" hreflang="x-default" href="{alt_link}" />'
+        if (alt_link and lang == "zh")
+        else ""
+    )
+    feed_href = f"{root}feed.xml" if lang == "en" else f"{root}zh/feed.xml"
+    skip = ui["skip"]
+    nav_posts = ui["nav_posts"]
+    nav_tags = ui["nav_tags"]
+    lang_switch = (
+        f'<a class="lang-switch" href="{root}{alt_href}" hreflang="{ALT_LANG[lang]}">{LANG_LABEL[lang]}</a>'
+        if alt_href
+        else ""
+    )
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{HTML_LANG[lang]}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -575,14 +632,16 @@ def page(
 <meta property="og:type" content="{page_type}" />
 <meta property="og:title" content="{full_title}" />
 <meta property="og:description" content="{html.escape(description or str(config['description']))}" />
-{f'<meta property="og:image" content="{config["base_url"]}/{html.escape(image)}" /><meta name="twitter:card" content="summary_large_image" />' if image else ''}
+{f'<meta property="og:image" content="{base}/{html.escape(image)}" /><meta name="twitter:card" content="summary_large_image" />' if image else ''}
 {f'<link rel="canonical" href="{canonical}" />' if canonical else ''}
-<link rel="alternate" type="application/rss+xml" title="{site_title}" href="{root}feed.xml" />
+{alt}
+{xdefault}
+<link rel="alternate" type="application/rss+xml" title="{site_title}" href="{feed_href}" />
 <link rel="stylesheet" href="{root}assets/blog.css" />
 <script src="{root}assets/blog.js" defer></script>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">{skip}</a>
 <header class="site-header">
   <div class="wrap header-inner">
     <a class="brand" href="{root}index.html">
@@ -590,11 +649,12 @@ def page(
       <span class="brand-text">{site_title}</span>
     </a>
     <nav class="site-nav">
-      <a href="{root}index.html">Posts</a>
-      <a href="{root}tags/index.html">Tags</a>
-      <a href="{root}feed.xml">RSS</a>
+      <a href="{root}index.html">{nav_posts}</a>
+      <a href="{root}tags/index.html">{nav_tags}</a>
+      <a href="{feed_href}">RSS</a>
       <a class="nav-external" href="{site_repo}">GitHub</a>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme">◐</button>
+      {lang_switch}
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="{ui['theme_label']}">◐</button>
     </nav>
   </div>
 </header>
@@ -604,7 +664,7 @@ def page(
 <footer class="site-footer">
   <div class="wrap">
     <p>{site_title} — {html.escape(str(config['tagline']))}.</p>
-    <p class="muted">Source: <a href="{html.escape(str(config['repo_url']))}/tree/{html.escape(str(config['repo_branch']))}/blog">blog/</a> · <a href="{root}feed.xml">RSS</a></p>
+    <p class="muted">{ui['source_label']} <a href="{html.escape(str(config['repo_url']))}/tree/{html.escape(str(config['repo_branch']))}/blog">blog/</a> · <a href="{feed_href}">RSS</a></p>
   </div>
 </footer>
 </body>
@@ -626,7 +686,34 @@ def post_card(post: Post, root: str) -> str:
 </article>"""
 
 
-def render_index(config: dict[str, object], posts: list[Post], tags: list[tuple[str, str, int]]) -> str:
+def lang_config(config: dict[str, object], lang: str) -> dict[str, object]:
+    """Config with localized chrome applied (title/tagline/description)."""
+    if lang == "en":
+        return config
+    merged = dict(config)
+    i18n = config.get("i18n", {})
+    if isinstance(i18n, dict):
+        for key, value in i18n.get(lang, {}).items():
+            merged[key] = value
+    return merged
+
+
+def alt_for(lang: str, path: str, base: str) -> tuple[str, str]:
+    """(absolute alt link, root-relative alt href) for `path` like 'posts/x.html'.
+
+    English lives at /<path>; Chinese at /zh/<path>. The href is root-relative;
+    page() prefixes the page's own ../ depth so it resolves from any depth.
+    """
+    alt_path = path if lang == "zh" else f"zh/{path}"
+    return f"{base}/{alt_path}", alt_path
+
+
+def render_index(
+    config: dict[str, object],
+    posts: list[Post],
+    tags: list[tuple[str, str, int]],
+    lang: str = "en",
+) -> str:
     cards = "\n".join(post_card(post, "") for post in posts) or (
         '<p class="muted">No posts yet.</p>'
     )
@@ -640,26 +727,41 @@ def render_index(config: dict[str, object], posts: list[Post], tags: list[tuple[
             )
             + "</p>"
         )
+    cfg = lang_config(config, lang)
+    ui = UI_STRINGS[lang]
+    base = str(config["base_url"]).rstrip("/")
+    prefix = "" if lang == "en" else "zh/"
+    home = f"{prefix}index.html"
     body = f"""<section class="hero">
-  <h1>{html.escape(str(config['title']))}</h1>
-  <p class="tagline">{html.escape(str(config['tagline']))}</p>
+  <h1>{html.escape(str(cfg['title']))}</h1>
+  <p class="tagline">{html.escape(str(cfg['tagline']))}</p>
   {tag_cloud}
 </section>
 <section class="post-list">
 {cards}
 </section>"""
+    alt_link, alt_href = alt_for(lang, "index.html", base)
     return page(
-        config=config,
-        title=str(config["title"]),
+        config=cfg,
+        title=str(cfg["title"]),
         body=body,
-        depth=0,
-        canonical=f"{config['base_url']}/",
+        depth=0 if lang == "en" else 1,
+        canonical=f"{base}/{prefix}",
+        lang=lang,
+        alt_link=alt_link,
+        alt_href=alt_href,
     )
 
 
-def render_post(config: dict[str, object], post: Post, body_html: str) -> str:
+def render_post(config: dict[str, object], post: Post, body_html: str, lang: str = "en") -> str:
+    cfg = lang_config(config, lang)
+    ui = UI_STRINGS[lang]
+    base = str(config["base_url"]).rstrip("/")
+    depth = 1 if lang == "en" else 2
+    root = "../" * depth
+    prefix = "" if lang == "en" else "zh/"
     tags = "".join(
-        f'<a class="tag" href="../tags/{slug}.html">{html.escape(tag)}</a>'
+        f'<a class="tag" href="{root}tags/{slug}.html">{html.escape(tag)}</a>'
         for tag, slug in post.tag_slugs()
     )
     edit = (
@@ -679,23 +781,31 @@ def render_post(config: dict[str, object], post: Post, body_html: str) -> str:
 {body_html}
   </div>
   <footer class="post-footer">
-    <a href="{html.escape(edit)}">Edit this post</a>
-    <a href="../index.html">← All posts</a>
+    <a href="{html.escape(edit)}">{ui['edit']}</a>
+    <a href="{root}index.html">{ui['all_posts']}</a>
   </footer>
 </article>"""
+    alt_link, alt_href = alt_for(lang, post.url, base)
     return page(
-        config=config,
+        config=cfg,
         title=post.title,
         body=body,
-        depth=1,
+        depth=depth,
         description=post.summary,
-        canonical=f"{config['base_url']}/{post.url}",
+        canonical=f"{base}/{prefix}{post.url}",
         page_type="article",
         image=post.image,
+        lang=lang,
+        alt_link=alt_link,
+        alt_href=alt_href,
     )
 
 
-def render_tag_index(config: dict[str, object], tags: list[tuple[str, str, int]]) -> str:
+def render_tag_index(config: dict[str, object], tags: list[tuple[str, str, int]], lang: str = "en") -> str:
+    cfg = lang_config(config, lang)
+    ui = UI_STRINGS[lang]
+    base = str(config["base_url"]).rstrip("/")
+    prefix = "" if lang == "en" else "zh/"
     if tags:
         items = "\n".join(
             f'<li><a href="{slug}.html">{html.escape(tag)}</a> <span class="count">{count}</span></li>'
@@ -703,18 +813,25 @@ def render_tag_index(config: dict[str, object], tags: list[tuple[str, str, int]]
         )
         listing = f'<ul class="tag-index">\n{items}\n</ul>'
     else:
-        listing = '<p class="muted">No tags yet.</p>'
-    body = f'<section class="hero"><h1>Tags</h1></section>\n<section class="post-list">{listing}</section>'
+        listing = f'<p class="muted">{ui["no_tags"]}</p>'
+    body = f'<section class="hero"><h1>{ui["tags_heading"]}</h1></section>\n<section class="post-list">{listing}</section>'
+    alt_link, alt_href = alt_for(lang, "tags/index.html", base)
     return page(
-        config=config,
-        title="Tags",
+        config=cfg,
+        title=ui["tags_heading"],
         body=body,
-        depth=1,
-        canonical=f"{config['base_url']}/tags/",
+        depth=1 if lang == "en" else 2,
+        canonical=f"{base}/{prefix}tags/",
+        lang=lang,
+        alt_link=alt_link,
+        alt_href=alt_href,
     )
 
 
-def render_tag_page(config: dict[str, object], tag: str, posts: list[Post]) -> str:
+def render_tag_page(config: dict[str, object], tag: str, posts: list[Post], lang: str = "en") -> str:
+    cfg = lang_config(config, lang)
+    base = str(config["base_url"]).rstrip("/")
+    prefix = "" if lang == "en" else "zh/"
     cards = "\n".join(post_card(post, "../") for post in posts)
     body = (
         f'<section class="hero"><h1>{html.escape(tag)}</h1>'
@@ -722,17 +839,23 @@ def render_tag_page(config: dict[str, object], tag: str, posts: list[Post]) -> s
         f'<p><a href="index.html">← All tags</a></p></section>\n'
         f'<section class="post-list">\n{cards}\n</section>'
     )
+    alt_link, alt_href = alt_for(lang, f"tags/{slugify(tag)}.html", base)
     return page(
-        config=config,
+        config=cfg,
         title=f"Tag: {tag}",
         body=body,
-        depth=1,
-        canonical=f"{config['base_url']}/tags/{slugify(tag)}.html",
+        depth=1 if lang == "en" else 2,
+        canonical=f"{base}/{prefix}tags/{slugify(tag)}.html",
+        lang=lang,
+        alt_link=alt_link,
+        alt_href=alt_href,
     )
 
 
-def render_feed(config: dict[str, object], posts: list[Post]) -> str:
+def render_feed(config: dict[str, object], posts: list[Post], lang: str = "en") -> str:
+    cfg = lang_config(config, lang)
     base = str(config["base_url"]).rstrip("/")
+    prefix = "" if lang == "en" else "zh/"
     limit = int(config["feed_size"])
     items = []
     for post in posts[:limit]:
@@ -744,8 +867,8 @@ def render_feed(config: dict[str, object], posts: list[Post]) -> str:
                 (
                     "  <item>",
                     f"    <title>{html.escape(post.title)}</title>",
-                    f"    <link>{base}/{post.url}</link>",
-                    f'    <guid isPermaLink="true">{base}/{post.url}</guid>',
+                    f"    <link>{base}/{prefix}{post.url}</link>",
+                    f'    <guid isPermaLink="true">{base}/{prefix}{post.url}</guid>',
                     f"    <pubDate>{published}</pubDate>",
                     f"    <description>{html.escape(post.summary)}</description>",
                     *(
@@ -756,17 +879,18 @@ def render_feed(config: dict[str, object], posts: list[Post]) -> str:
             )
         )
     updated = posts[0].date.isoformat() if posts else dt.date.today().isoformat()
+    feed_lang = "en" if lang == "en" else "zh-CN"
     return "\n".join(
         (
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
             "  <channel>",
-            f"    <title>{html.escape(str(config['title']))}</title>",
-            f"    <link>{base}/</link>",
-            f"    <description>{html.escape(str(config['description']))}</description>",
-            "    <language>en</language>",
+            f"    <title>{html.escape(str(cfg['title']))}</title>",
+            f"    <link>{base}/{prefix}</link>",
+            f"    <description>{html.escape(str(cfg['description']))}</description>",
+            f"    <language>{feed_lang}</language>",
             f"    <lastBuildDate>{updated}</lastBuildDate>",
-            f'    <atom:link href="{base}/feed.xml" rel="self" type="application/rss+xml" />',
+            f'    <atom:link href="{base}/{prefix}feed.xml" rel="self" type="application/rss+xml" />',
             *items,
             "  </channel>",
             "</rss>",
@@ -780,6 +904,10 @@ def render_sitemap(config: dict[str, object], posts: list[Post], tags: list[tupl
     urls = [f"{base}/", f"{base}/tags/"]
     urls += [f"{base}/{post.url}" for post in posts]
     urls += [f"{base}/tags/{slug}.html" for _, slug, _ in tags]
+    # Chinese mirror.
+    urls += [f"{base}/zh/", f"{base}/zh/tags/"]
+    urls += [f"{base}/zh/{post.url}" for post in posts]
+    urls += [f"{base}/zh/tags/{slug}.html" for _, slug, _ in tags]
     entries = "\n".join(f"  <url><loc>{url}</loc></url>" for url in urls)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -809,10 +937,22 @@ def load_config(blog_dir: Path, base_url: str | None = None) -> dict[str, object
 
 def build(blog_dir: Path, out_dir: Path, base_url: str | None = None, include_drafts: bool = False) -> int:
     config = load_config(blog_dir, base_url)
-    posts = load_posts(blog_dir, include_drafts)
-    known_slugs = {post.slug for post in posts}
-    for post in posts:
-        validate_post_links(post, known_slugs)
+    en_posts = load_posts(blog_dir, include_drafts, lang="en")
+    en_slugs = {post.slug for post in en_posts}
+    for post in en_posts:
+        validate_post_links(post, en_slugs)
+
+    zh_posts = load_posts(blog_dir, include_drafts, lang="zh")
+    zh_slugs = {post.slug for post in zh_posts}
+    # A translation must mirror an existing English post (same slug); a
+    # Chinese-only post would leave the language switcher pointing at a 404.
+    orphans = sorted(zh_slugs - en_slugs)
+    if orphans:
+        raise PostError(
+            f"Chinese post(s) with no English original (slug must match): {', '.join(orphans)}"
+        )
+    for post in zh_posts:
+        validate_post_links(post, zh_slugs)
 
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -823,34 +963,53 @@ def build(blog_dir: Path, out_dir: Path, base_url: str | None = None, include_dr
         shutil.copytree(assets, out_dir / "assets")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
 
-    counts: dict[str, int] = {}
-    tags: dict[str, list[Post]] = {}
-    for post in posts:
-        for tag in post.tags:
-            tags.setdefault(tag, []).append(post)
-            counts[tag] = counts.get(tag, 0) + 1
-    tag_list = sorted(((tag, slugify(tag), counts[tag]) for tag in counts), key=lambda item: item[0].lower())
-
-    (out_dir / "index.html").write_text(render_index(config, posts, tag_list), encoding="utf-8")
-    (out_dir / "tags").mkdir()
-    (out_dir / "tags" / "index.html").write_text(render_tag_index(config, tag_list), encoding="utf-8")
-    for tag, slug, _ in tag_list:
-        (out_dir / "tags" / f"{slug}.html").write_text(
-            render_tag_page(config, tag, tags[tag]), encoding="utf-8"
+    def emit(lang: str, posts: list[Post], dest: Path) -> int:
+        counts: dict[str, int] = {}
+        tags: dict[str, list[Post]] = {}
+        for post in posts:
+            for tag in post.tags:
+                tags.setdefault(tag, []).append(post)
+                counts[tag] = counts.get(tag, 0) + 1
+        tag_list = sorted(
+            ((tag, slugify(tag), counts[tag]) for tag in counts), key=lambda item: item[0].lower()
         )
 
-    (out_dir / "posts").mkdir()
-    for post in posts:
-        (out_dir / "posts" / f"{post.slug}.html").write_text(
-            render_post(config, post, render_markdown(post.body)), encoding="utf-8"
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "index.html").write_text(
+            render_index(config, posts, tag_list, lang), encoding="utf-8"
         )
+        (dest / "tags").mkdir(exist_ok=True)
+        (dest / "tags" / "index.html").write_text(
+            render_tag_index(config, tag_list, lang), encoding="utf-8"
+        )
+        for tag, slug, _ in tag_list:
+            (dest / "tags" / f"{slug}.html").write_text(
+                render_tag_page(config, tag, tags[tag], lang), encoding="utf-8"
+            )
+        (dest / "posts").mkdir(exist_ok=True)
+        for post in posts:
+            (dest / "posts" / f"{post.slug}.html").write_text(
+                render_post(config, post, render_markdown(post.body), lang), encoding="utf-8"
+            )
+        (dest / "feed.xml").write_text(render_feed(config, posts, lang), encoding="utf-8")
+        return len(tag_list)
 
-    (out_dir / "feed.xml").write_text(render_feed(config, posts), encoding="utf-8")
-    (out_dir / "sitemap.xml").write_text(render_sitemap(config, posts, tag_list), encoding="utf-8")
+    en_tags = emit("en", en_posts, out_dir)
+    zh_tags = emit("zh", zh_posts, out_dir / "zh") if zh_posts else 0
+
+    # The sitemap covers every URL in both languages (English slugs are the
+    # superset, so reuse them for the /zh/ entries).
+    all_tags = sorted(
+        {slugify(tag) for post in en_posts for tag in post.tags}
+        | {slugify(tag) for post in zh_posts for tag in post.tags}
+    )
+    (out_dir / "sitemap.xml").write_text(
+        render_sitemap(config, en_posts, [(t, t, 0) for t in all_tags]), encoding="utf-8"
+    )
 
     print(
-        f"Built {len(posts)} post(s), {len(tag_list)} tag(s) → {out_dir}"
-        f" (base_url {config['base_url']})"
+        f"Built {len(en_posts)} en + {len(zh_posts)} zh post(s), {en_tags} en + {zh_tags} zh tag(s)"
+        f" → {out_dir} (base_url {config['base_url']})"
     )
     return 0
 
