@@ -13,7 +13,7 @@ desktop, not the phone — so commands, conversation events and file content all
 travel between the two devices over a NATS relay.
 
 That relay is on the public network. Which means the design has to start from an
-uncomfortable assumption: **the broker is hostile.**
+uncomfortable assumption: **the relay is hostile.**
 
 ## The threat model
 
@@ -29,10 +29,11 @@ subjects.
 What this doesn't protect, stated plainly: a compromised endpoint, a stolen or
 unlocked credential store, a leaked **unused** invitation, traffic timing and
 size, NATS subject metadata, or availability. Cloud revocation isn't an
-instantaneous kill signal if an attacker can suppress delivery. NATS JWT ACLs
-stay as defense in depth, not proof of message origin. And the transport hop is
-separate from the end-to-end layer — production Desktop requires verified TLS,
-Mobile requires WSS.
+instantaneous kill signal if an attacker can suppress delivery — but local
+disable or unpair is: it invalidates access and clears traffic keys and
+candidates on the spot. NATS JWT ACLs stay as defense in depth, not proof of
+message origin. And the transport hop is separate from the end-to-end layer —
+production Desktop requires verified TLS, Mobile requires WSS.
 
 ## Pairing: a short-lived bearer invitation
 
@@ -41,9 +42,10 @@ moment a secret crosses in the open.
 
 The desktop generates an X25519 identity and an independent random 32-byte
 invitation PSK locally. Neither the private key nor the PSK is sent to the
-platform API. The invitation — the same one whether you scan the QR code or
-paste the text — carries `v=2`, the platform code, the `desktopId`, the NATS
-`desktopKey`, the X25519 `secureKey`, and the local `secret`.
+platform API; the platform's claim nonce is a separate value, and that one does
+still go to the platform. The invitation — the same one whether you scan the QR
+code or paste the text — carries `v=2`, the platform code, the `desktopId`, the
+NATS `desktopKey`, the X25519 `secureKey`, and the local `secret`.
 
 Treat the whole invitation as a short-lived bearer credential: it's valid for
 five minutes and usable once. Don't share it or post a screenshot of it.
@@ -51,9 +53,9 @@ five minutes and usable once. Don't share it or post a screenshot of it.
 ![Pairing a phone from the desktop](../assets/e2ee/desktop-pairing-qr.png)
 
 *Figure 1: the panel the desktop puts up to pair a phone, countdown included. The
-QR encodes the one-time, five-minute invitation — this one is from the demo
-fixture, not a live code. Once the handshake completes the desktop deletes the
-PSK and the invitation is spent.*
+QR encodes the invitation — single-use, and five minutes by default, which is the
+TTL this demo capture was taken with. It is not a live code. Once the handshake
+completes the desktop deletes the PSK and the invitation is spent.*
 
 The phone generates its own X25519 identity and stores the bundle in Expo
 SecureStore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`); the desktop stores its pairing
@@ -76,7 +78,7 @@ with IK using the same phone identity — without ever accepting a
 server-supplied replacement key. Every handshake uses fresh ephemeral keys, and
 traffic keys and counters are never saved.
 
-Two details keep the handshake honest:
+The handshake stays honest in a few details that are easy to get wrong:
 
 - Raw handshake input is capped (16 KiB raw, 8 KiB per Noise message), pending
   candidates are bounded and expire after 30 s, and only authenticated Noise
@@ -85,8 +87,8 @@ Two details keep the handshake honest:
   encrypted `handshake-confirm`; only after the phone installs and flushes its
   subscriptions and sends an encrypted `secure_ready` does the desktop commit
   that candidate as current. A failed candidate never deactivates the previous
-  channel, and an uncommitted candidate can't run ordinary commands or upload
-  chunks.
+  channel, a stopped access epoch can't install a late candidate, and an
+  uncommitted candidate can't run ordinary commands or upload chunks.
 
 ## The record layer
 
@@ -115,15 +117,16 @@ Each record is:
 The nonce is four zero bytes followed by the 8-byte sequence. Each direction has
 an independent key and monotonic counter, with a mandatory re-handshake before
 sequence 2³²−1. The wire limit is 1 MiB, leaving 1 MiB − 44 for plaintext; the
-fixed overhead is 44 bytes, no Base64 expansion.
+fixed overhead is 44 bytes, and business and file traffic pay no Base64 expansion.
+(Handshake fields are small Base64url strings, which is a different path.)
 
-The parts that make it hold up under an adversarial broker:
+The parts that make it hold up under an adversarial relay:
 
 - **The NATS subject is authenticated as additional data.** Substituting a
   subject — replaying a record onto a different one — fails authentication.
-- **Replies are bound to their request, not the broker's inbox.** The reply
-  context is `reply:<request subject>:<hex of the request header bytes>`, so
-  substituting reply inboxes can't substitute responses.
+- **Replies are bound to their request, not the relay's inbox.** The reply
+  context is `reply:<request subject>:<hex of the request's fixed header bytes
+  4..28>`, so substituting reply inboxes can't substitute responses.
 - **A bounded replay window.** Receivers keep a 4096-record window per
   channel/direction, and authentication succeeds *before* the window mutates.
   Reflected, wrong-subject, wrong-connection, tampered, duplicate and
@@ -147,14 +150,21 @@ The test suite also exercises bytewise tampering, wrong PSK/prologue/key,
 replay and reflection, large records, lost confirmation, pinned-key reconnect,
 stale credential refresh, failed persistence, invitation reuse/expiry, the
 readiness handoff, local invalidation, and an encrypted request through the
-actual Desktop NATS command loop. The verification pass (Rust clippy with
-`-D warnings`, 1167 desktop backend tests, 967 desktop Vitest tests, 900 mobile
-Jest tests) is in the repo's verification snapshot.
+actual Desktop NATS command loop. The verification pass — Rust clippy with
+`-D warnings`, 1167 desktop library tests plus its binary and integration
+groups, 967 desktop Vitest tests, 900 mobile Jest tests — is in the repo's
+verification snapshot.
 
-Two honest limits. Performance and battery have to be measured on real
-Android/iOS devices before any handset-latency claim — the numbers we have are
-Node/desktop microbenchmarks, not device guarantees. And this is not an
-independent cryptographic audit or a penetration-test certificate.
+One caveat on what that proves. The older business and lifecycle fixtures mock
+their own authenticated transport, so passing fixtures are not on their own
+evidence of end-to-end encryption; the crypto vectors and the paths driven
+through the real command loop are. The in-process Rust test relay also runs in
+plaintext by design.
+
+What is left unmeasured is the device side. Performance and battery have to be
+measured on real Android/iOS hardware before any handset-latency claim — what we
+have are Node and desktop test runs, not device guarantees. And none of this is
+an independent cryptographic audit or a penetration-test certificate.
 
 ## Where this leaves it
 
