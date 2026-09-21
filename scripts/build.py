@@ -262,7 +262,9 @@ class MarkdownRenderer:
             ]
             parts.append("</tr>")
         parts += ["</tbody>", "</table>"]
-        return "\n".join(parts), i
+        # Wrapped in a scrollable container: `overflow-x:auto` on a <table> is
+        # unreliable across engines, so a wide table clips instead of scrolling.
+        return '<div class="table-wrap">\n' + "\n".join(parts) + "\n</div>", i
 
     # -- lists -------------------------------------------------------------
     def _list(self, block: list[str]) -> str:

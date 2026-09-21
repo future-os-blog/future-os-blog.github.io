@@ -222,6 +222,12 @@ class MarkdownTests(unittest.TestCase):
         self.assertIn('style="text-align:right"', html)
         self.assertIn("<td>a</td>", html)
 
+    def test_tables_are_wrapped_in_a_scroll_container(self):
+        """overflow-x:auto on <table> is unreliable; the wrapper scrolls instead."""
+        html = render("| A | B |\n| --- | --- |\n| 1 | 2 |\n")
+        self.assertIn('<div class="table-wrap">', html)
+        self.assertIn("<table>", html)
+
     def test_blockquote_rule_and_hard_break(self):
         html = render("> quoted\n\n---\n\nline one  \nline two\n")
         self.assertIn("<blockquote>", html)

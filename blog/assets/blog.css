@@ -378,6 +378,7 @@ a:focus-visible {
 .prose ol,
 .prose blockquote,
 .prose table,
+.prose .table-wrap,
 .prose pre {
   margin: 0 0 1.05rem;
 }
@@ -447,12 +448,15 @@ a:focus-visible {
   font-size: inherit;
 }
 
+.table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .prose table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.92rem;
-  display: block;
-  overflow-x: auto;
+  font-size: 0.9rem;
 }
 
 .prose table thead {
