@@ -12,9 +12,9 @@ description: "FutureOS 如何在三个操作系统上给 shell 命令做沙箱�
 
 这篇文章讲我们是怎么做的，包括那些没能完全奏效的部分。
 
-![三个操作系统的沙箱机制对比：macOS 用 Seatbelt、Linux 用 Bubblewrap、Windows 用受限令牌加 NTFS ACL](../assets/sandbox/compare-zh.png)
+![FutureOS 编辑器中的审批模式下拉菜单，显示 Manual、Sandboxed、Unrestricted](../assets/sandbox/composer-approval-en.png)
 
-*同一份规则，三套翻译。macOS 和 Linux 读写都受控；Windows 只控写，读不受控——这是全篇最重要的一行。*
+*一个设置，三种行为。同一个「Sandboxed」档位在 Mac 上是 Seatbelt，在 Linux 上是 Bubblewrap，在 Windows 上只是写保护。*
 
 ## 一套规则模型，三个后端
 
@@ -34,6 +34,14 @@ description: "FutureOS 如何在三个操作系统上给 shell 命令做沙箱�
 规则放在两个文件里——一个在工作区、一个在主目录——这样项目规则可以提交进 git，个人规则留在自己手里。有一条优先级：内置守卫高于会话授权，会话授权高于工作区规则，工作区规则高于用户规则。一份内置守卫清单把那些显而易见的凭据（`.ssh`、`.aws`、`.env`、`.npmrc`、kubeconfig 等等）标为读写都「总是询问」，而且再宽的目录允许也抬不动一条守卫。
 
 这套模型是容易的部分。难的部分在于：当一条命令真正运行时，这套抽象规则必须变成内核真的会执行的东西——而内核在每个操作系统上说的是不同的语言。
+
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| 后端 | Seatbelt | Bubblewrap | 受限令牌 + NTFS ACL |
+| Shell 读保护 | SBPL 路径规则 | 遮蔽挂载 | **不提供** |
+| Shell 写保护 | 动态 SBPL 规则 | 只读根 + 可写挂载 | 能力 SID 写边界 |
+
+把最后一行再读一遍。它是全篇最重要的一行。
 
 ## macOS：最像你想象的那个
 
