@@ -57,7 +57,7 @@ One more practical number hides in the research runs: the local model took 65 tu
 
 ## Quality: three points, split six–six
 
-![K3 scores per task](../assets/local-model/fig3-scores.png)
+![K3 scores per task](../assets/local-model/fig2-scores.png)
 
 *K3 scores per task, axis starts at 75. The 12 items split six–six; local's wins cluster in reasoning and grounding, cloud's in instruction-following and polish.*
 
@@ -110,7 +110,7 @@ This is the workload where "good enough" is weakest: a local research report is 
 
 ## The wait: what the speed tax actually looks like
 
-![Time to first token vs new tokens](../assets/local-model/fig2-ttft.png)
+![Time to first token vs new tokens](../assets/local-model/fig3-ttft.png)
 
 *Time to first token against new (uncached) tokens in the turn. The local slope is the measured prefill rate, 382 tokens/s; the cloud line is flat at ≈0.9 s below what this measurement can resolve.*
 
