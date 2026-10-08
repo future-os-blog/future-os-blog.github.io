@@ -57,7 +57,7 @@ description: "我们在 deepseek-flash 与本地部署的 Qwen3.8-27B（M3 Ultra
 
 ## 质量：3 分，6 比 6
 
-![K3 逐项得分](../assets/local-model/fig2-scores.png)
+![K3 逐项得分](../assets/local-model/fig3-scores.png)
 
 *K3 逐项得分，坐标轴从 75 起。12 项 6 比 6；本地赢在推理与事实，云端赢在指令遵循与打磨。*
 
@@ -110,7 +110,7 @@ description: "我们在 deepseek-flash 与本地部署的 Qwen3.8-27B（M3 Ultra
 
 ## 等待：速度税到底长什么样
 
-![首 token 时间对新 token 数](../assets/local-model/fig3-ttft.png)
+![首 token 时间对新 token 数](../assets/local-model/fig2-ttft.png)
 
 *首 token 时间对新（未缓存）token 数。本地的斜率是实测预填充速率 382 token/s；云端在本次测量能分辨的范围内是 ≈0.9 s 的平线。*
 
